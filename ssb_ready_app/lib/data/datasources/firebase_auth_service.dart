@@ -37,8 +37,6 @@ class FirebaseAuthService implements AuthService {
         throw Exception('Email and password are required');
       }
 
-      debugPrint('Attempting Firebase signup for email: $email');
-
       final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -50,7 +48,6 @@ class FirebaseAuthService implements AuthService {
             message: 'Signup failed. User not created.');
       }
 
-      // Update Firebase profile with name
       await user.updateDisplayName('$firstName $lastName');
 
       final userModel = UserModel(
@@ -58,13 +55,12 @@ class FirebaseAuthService implements AuthService {
         firstName: firstName,
         lastName: lastName,
         email: email,
-        userType: '', // Needs to be updated later by UI
+        userType: '',
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         isPremium: false,
       );
 
-      // Save user to Firestore
       await _firestore
           .collection('users')
           .doc(user.uid)
@@ -74,14 +70,11 @@ class FirebaseAuthService implements AuthService {
       final token = await user.getIdToken();
       await _prefs.setString('auth_token', token ?? '');
 
-      debugPrint('Signup successful for user: ${userModel.id}');
       return userModel;
     } on FirebaseAuthException catch (e) {
-      debugPrint('Firebase AuthException: ${e.message}');
       throw AuthFailure.signUpFailed(
           message: e.message ?? 'Unknown error occurred.');
     } catch (e) {
-      debugPrint('Unexpected signup error: $e');
       throw AuthFailure.signUpFailed(
           message: 'An error occurred: ${e.toString()}');
     }
@@ -93,8 +86,6 @@ class FirebaseAuthService implements AuthService {
     required String password,
   }) async {
     try {
-      debugPrint('Attempting Firebase signin for email: $email');
-
       final userCredential = await _firebaseAuth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -115,8 +106,7 @@ class FirebaseAuthService implements AuthService {
         firstName: firstName,
         lastName: lastName,
         email: user.email ?? '',
-        userType:
-            '', // We don't store this in Firebase Auth profile directly by default
+        userType: '',
         createdAt: user.metadata.creationTime ?? DateTime.now(),
         updatedAt: user.metadata.lastSignInTime ?? DateTime.now(),
         isPremium: false,
@@ -126,14 +116,11 @@ class FirebaseAuthService implements AuthService {
       final token = await user.getIdToken();
       await _prefs.setString('auth_token', token ?? '');
 
-      debugPrint('SignIn successful for user: ${userModel.id}');
       return userModel;
     } on FirebaseAuthException catch (e) {
-      debugPrint('Firebase AuthException: ${e.message}');
       throw AuthFailure.signInFailed(
           message: e.message ?? 'Unknown error occurred.');
     } catch (e) {
-      debugPrint('Unexpected signin error: $e');
       throw AuthFailure.signInFailed(
           message: 'An error occurred: ${e.toString()}');
     }
@@ -203,7 +190,6 @@ class FirebaseAuthService implements AuthService {
       final token = await user.getIdToken();
       await _prefs.setString('auth_token', token ?? '');
 
-      debugPrint('Google SignIn successful for user: ${userModel.id}');
       return userModel;
     } on FirebaseAuthException catch (e) {
       debugPrint('Firebase Google AuthException: ${e.message}');

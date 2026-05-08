@@ -1,4 +1,4 @@
-package com.blocstarter.flutter_bloc_starter
+package com.ssbready
 
 import io.flutter.embedding.android.FlutterActivity
 
