@@ -1,25 +1,20 @@
 const admin = require('firebase-admin');
-const fs = require('fs');
-const path = require('path');
+require('dotenv').config();
 
-// Dynamically loading the project info from the google-services.json file you provided
-const googleServicesPath = path.join(__dirname, '../../ssb_ready_app/android/app/google-services.json');
-
-let firebaseConfig = {};
-try {
-  const fileContent = fs.readFileSync(googleServicesPath, 'utf8');
-  const googleServices = JSON.parse(fileContent);
-  firebaseConfig = {
-    projectId: googleServices.project_info.project_id,
-    storageBucket: googleServices.project_info.storage_bucket,
-  };
-  console.log(`Firebase initialized with Project ID: ${firebaseConfig.projectId}`);
-} catch (err) {
-  console.warn('Warning: Could not read google-services.json. Falling back to default initialization.');
-}
+// Using environment variables for Firebase configuration as per your request
+const firebaseConfig = {
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+};
 
 if (!admin.apps.length) {
-  admin.initializeApp(firebaseConfig);
+  if (firebaseConfig.projectId) {
+    admin.initializeApp(firebaseConfig);
+    console.log(`Firebase initialized with Project ID: ${firebaseConfig.projectId}`);
+  } else {
+    console.warn('Warning: FIREBASE_PROJECT_ID is missing in .env');
+    admin.initializeApp();
+  }
 }
 
 const db = admin.firestore();
