@@ -7,17 +7,17 @@
   "scripts": {
     "start": "node server.js",
     "dev": "NODE_ENV=development node server.js",
-    "check": "node -e \"require('./app').createApp(); console.log('App bootstrap check passed')\""
+    "check": "node -e \"require('./config').loadEnv(); require('./app').createApp(); console.log('App bootstrap check passed')\""
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.49.8",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
-    "firebase-admin": "^13.9.0"
+    "firebase-admin": "^13.9.0",
+    "openai": "^4.104.0"
   }
 }

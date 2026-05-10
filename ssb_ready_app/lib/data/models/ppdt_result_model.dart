@@ -28,13 +28,16 @@ class PpdtResultModel {
   }
 
   factory PpdtResultModel.fromJson(Map<String, dynamic> json, String documentId) {
+    final completedAtRaw = json['completedAt'];
     return PpdtResultModel(
       id: documentId,
       userId: json['userId'] ?? '',
       imageUrl: json['imageUrl'] ?? '',
       userStory: json['userStory'] ?? '',
       aiFeedback: json['aiFeedback'] ?? '',
-      completedAt: (json['completedAt'] as Timestamp).toDate(),
+      completedAt: completedAtRaw is Timestamp
+          ? completedAtRaw.toDate()
+          : DateTime.tryParse((completedAtRaw ?? '').toString()) ?? DateTime.now(),
     );
   }
 }

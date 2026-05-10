@@ -1,5 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:ssb_ready_app/core/services/ai_evaluation_service.dart';
+import 'package:ssb_ready_app/core/services/evaluation_pipeline_service.dart';
 import 'package:ssb_ready_app/domain/repositories/auth_repository.dart';
 import 'package:ssb_ready_app/domain/repositories/test_history_repository.dart';
 import 'package:ssb_ready_app/data/models/piq_model.dart';
@@ -8,8 +8,15 @@ import 'package:ssb_ready_app/presentation/bloc/interview/interview_bloc_state.d
 class InterviewBloc extends Bloc<InterviewEvent, InterviewState> {
   final AuthRepository _authRepository;
   final TestHistoryRepository _historyRepository;
+  final EvaluationPipelineService _evaluationPipeline;
 
-  InterviewBloc(this._authRepository, this._historyRepository) : super(const InterviewState()) {
+  InterviewBloc(
+    this._authRepository,
+    this._historyRepository, {
+    EvaluationPipelineService? evaluationPipeline,
+  })  : _evaluationPipeline =
+            evaluationPipeline ?? EvaluationPipelineService(),
+        super(const InterviewState()) {
     on<LoadPiq>(_onLoadPiq);
     on<UpdatePiqField>(_onUpdatePiqField);
     on<SavePiq>(_onSavePiq);
@@ -72,11 +79,18 @@ class InterviewBloc extends Bloc<InterviewEvent, InterviewState> {
     emit(state.copyWith(chatHistory: updatedHistory, status: InterviewStatus.loading));
     
     try {
-      final aiService = await AiEvaluationService.initialize();
-      if (aiService == null) throw Exception('AI Service failed');
+      final raw = await _evaluationPipeline.run(
+        testType: 'INTERVIEW_REPLY',
+        payload: {
+          'piq': state.piq!.toJson(),
+          'chatHistory': updatedHistory,
+        },
+      );
+      final reply = (raw['reply'] as String?)?.trim();
+      final response = reply != null && reply.isNotEmpty
+          ? reply
+          : 'I see. Tell me more about that.';
 
-      final response = await aiService.generateInterviewResponse(state.piq!, updatedHistory);
-      
       updatedHistory.add({'role': 'assistant', 'content': response});
       emit(state.copyWith(chatHistory: updatedHistory, status: InterviewStatus.interviewing));
     } catch (e) {

@@ -4,6 +4,7 @@ import 'package:ssb_ready_app/core/theme/app_colors.dart';
 import 'package:ssb_ready_app/core/utils/validators.dart';
 import 'package:ssb_ready_app/domain/repositories/auth_repository.dart';
 import 'package:ssb_ready_app/presentation/bloc/auth/auth_bloc.dart';
+import 'package:ssb_ready_app/presentation/widgets/app_brand_logo.dart';
 import 'package:ssb_ready_app/presentation/widgets/auth/custom_text_field.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -145,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthFailureState) {
@@ -161,181 +162,212 @@ class _LoginScreenState extends State<LoginScreen> {
         child: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
             final isLoading = state is AuthLoading;
-
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 60),
-                  Text(
-                    'Welcome Back',
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryGreen,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Sign in to continue your SSB journey',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                  ),
-                  const SizedBox(height: 48),
-                  CustomTextField(
-                    label: 'Email',
-                    hint: 'Enter your email',
-                    keyboardType: TextInputType.emailAddress,
-                    controller: _emailController,
-                    focusNode: _emailFocusNode,
-                    errorText: _emailError,
-                    onChanged: (_) {
-                      if (_emailError != null) _validateEmail();
-                    },
-                    onEditingComplete: _validateEmail,
-                  ),
-                  const SizedBox(height: 24),
-                  CustomTextField(
-                    label: 'Password',
-                    hint: 'Enter your password',
-                    controller: _passwordController,
-                    focusNode: _passwordFocusNode,
-                    errorText: _passwordError,
-                    isPassword: true,
-                    onChanged: (_) {
-                      if (_passwordError != null) _validatePassword();
-                    },
-                    onEditingComplete: _validatePassword,
-                  ),
-                  const SizedBox(height: 16),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: _handleForgotPassword,
-                      child: Text(
-                        'Forgot Password?',
-                        style:
-                            Theme.of(context).textTheme.labelMedium?.copyWith(
-                                  color: AppColors.primaryGreen,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                      ),
+            return Stack(
+              children: [
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFF0E3F36),
+                        Color(0xFF255B90),
+                        AppColors.background
+                      ],
+                      stops: [0, 0.28, 0.75],
                     ),
                   ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: isLoading ? null : _handleLogin,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryGreen,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: Colors.grey[300],
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                ),
+                SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 12),
+                        const Center(
+                          child: AppBrandLogo(size: 88, borderRadius: 22),
                         ),
-                      ),
-                      child: isLoading
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
+                        const SizedBox(height: 20),
+                        Text(
+                          'Welcome Back',
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineLarge
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Sign in to continue your SSB journey',
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.88),
+                                  ),
+                        ),
+                        const SizedBox(height: 30),
+                        Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: AppColors.glass,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 12),
+                              CustomTextField(
+                                label: 'Email',
+                                hint: 'Enter your email',
+                                keyboardType: TextInputType.emailAddress,
+                                controller: _emailController,
+                                focusNode: _emailFocusNode,
+                                errorText: _emailError,
+                                onChanged: (_) {
+                                  if (_emailError != null) _validateEmail();
+                                },
+                                onEditingComplete: _validateEmail,
+                              ),
+                              const SizedBox(height: 24),
+                              CustomTextField(
+                                label: 'Password',
+                                hint: 'Enter your password',
+                                controller: _passwordController,
+                                focusNode: _passwordFocusNode,
+                                errorText: _passwordError,
+                                isPassword: true,
+                                onChanged: (_) {
+                                  if (_passwordError != null) {
+                                    _validatePassword();
+                                  }
+                                },
+                                onEditingComplete: _validatePassword,
+                              ),
+                              const SizedBox(height: 16),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: _handleForgotPassword,
+                                  child: Text(
+                                    'Forgot Password?',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(
+                                          color: AppColors.primaryGreen,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
                                 ),
                               ),
-                            )
-                          : Text(
-                              'Sign In',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelLarge
-                                  ?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                              const SizedBox(height: 32),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 56,
+                                child: ElevatedButton(
+                                  onPressed: isLoading ? null : _handleLogin,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.secondary,
+                                    disabledBackgroundColor: AppColors.textHint,
                                   ),
-                            ),
+                                  child: isLoading
+                                      ? const SizedBox(
+                                          height: 24,
+                                          width: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
+                                          ),
+                                        )
+                                      : const Text('Sign In'),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              Row(
+                                children: [
+                                  Expanded(
+                                      child: Divider(
+                                          color: Colors.grey[300],
+                                          thickness: 1)),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16),
+                                    child: Text(
+                                      'OR',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: Colors.grey[600],
+                                          ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                      child: Divider(
+                                          color: Colors.grey[300],
+                                          thickness: 1)),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 56,
+                                child: OutlinedButton.icon(
+                                  onPressed:
+                                      isLoading ? null : _handleGoogleLogin,
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                  ),
+                                  icon: const Icon(Icons.g_mobiledata_rounded,
+                                      size: 26),
+                                  label: const Text('Sign in with Google'),
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "Don't have an account? ",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: Colors.grey[600],
+                                        ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () => Navigator.of(context)
+                                        .pushNamed('/signup'),
+                                    child: Text(
+                                      'Sign Up',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: AppColors.primaryGreen,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Divider(
-                          color: Colors.grey[300],
-                          thickness: 1,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'OR',
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: Colors.grey[600],
-                                  ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Divider(
-                          color: Colors.grey[300],
-                          thickness: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: OutlinedButton.icon(
-                      onPressed: isLoading ? null : _handleGoogleLogin,
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                          color: Colors.grey[300]!,
-                          width: 1,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: const Icon(Icons.login, size: 20),
-                      label: Text(
-                        'Sign in with Google',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: Colors.black87,
-                            ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Don't have an account? ",
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                      ),
-                      GestureDetector(
-                        onTap: () => Navigator.of(context).pushNamed('/signup'),
-                        child: Text(
-                          'Sign Up',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppColors.primaryGreen,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              ],
             );
           },
         ),

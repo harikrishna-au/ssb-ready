@@ -2,26 +2,39 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:http/http.dart' as http;
 import 'package:ssb_ready_app/data/models/ppdt_evaluation_model.dart';
 import 'package:ssb_ready_app/data/models/wat_evaluation_model.dart';
 import 'package:ssb_ready_app/data/models/srt_evaluation_model.dart';
 import 'package:ssb_ready_app/data/models/tat_evaluation_model.dart';
 import 'package:ssb_ready_app/data/models/piq_model.dart';
+import 'package:ssb_ready_app/core/services/evaluation_pipeline_service.dart';
 
 class AiEvaluationService {
   static const String _modelName = 'gemini-1.5-flash';
 
   final GenerativeModel? _model;
+  final String? _backendUrl;
 
-  AiEvaluationService._({GenerativeModel? model}) : _model = model;
+  AiEvaluationService._({GenerativeModel? model, String? backendUrl})
+      : _model = model,
+        _backendUrl = backendUrl?.trim().isNotEmpty == true
+            ? backendUrl!.trim().replaceAll(RegExp(r'/$'), '')
+            : null;
 
   /// Initializes the AI Service. 
   /// Returns null if GEMINI_API_KEY is not set in .env.
   static Future<AiEvaluationService?> initialize() async {
+    final backendUrl = dotenv.env['BACKEND_URL'];
     final apiKey = dotenv.env['GEMINI_API_KEY'];
+
+    if (backendUrl != null && backendUrl.trim().isNotEmpty) {
+      return AiEvaluationService._(backendUrl: backendUrl);
+    }
+
     if (apiKey == null || apiKey.isEmpty) {
       debugPrint('Warning: GEMINI_API_KEY not found in .env');
-      return AiEvaluationService._(); // Return an instance with a null model to handle gracefully
+      return AiEvaluationService._(); // Null model; handled gracefully downstream.
     }
 
     final model = GenerativeModel(
@@ -32,8 +45,41 @@ class AiEvaluationService {
     return AiEvaluationService._(model: model);
   }
 
+  Future<Map<String, dynamic>> _postJson(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    if (_backendUrl == null) {
+      throw Exception('BACKEND_URL is missing. Backend mode is not configured.');
+    }
+
+    final uri = Uri.parse('$_backendUrl$path');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'Backend request failed (${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Backend response is not a JSON object.');
+    }
+    return decoded;
+  }
+
   /// Evaluates a PPDT story using Gemini.
   Future<PpdtEvaluationModel> evaluateStory(String story) async {
+    if (_backendUrl != null) {
+      final jsonMap = await _postJson('/api/evaluate/ppdt', {'story': story});
+      return PpdtEvaluationModel.fromJson(jsonMap);
+    }
+
     if (_model == null) {
       throw Exception('Gemini API Key is missing. Please add GEMINI_API_KEY to your .env file.');
     }
@@ -98,6 +144,11 @@ Respond ONLY with valid JSON. Do not use Markdown block syntax (```json) around 
 
   /// Evaluates WAT responses using Gemini.
   Future<WatEvaluationModel> evaluateWat(Map<String, String> responses) async {
+    if (_backendUrl != null) {
+      final jsonMap = await _postJson('/api/evaluate/wat', {'responses': responses});
+      return WatEvaluationModel.fromJson(jsonMap);
+    }
+
     if (_model == null) {
       throw Exception('Gemini API Key is missing. Please add GEMINI_API_KEY to your .env file.');
     }
@@ -157,6 +208,11 @@ Respond ONLY with valid JSON. Do not use Markdown block syntax (```json) around 
 
   /// Evaluates SRT responses using Gemini.
   Future<SrtEvaluationModel> evaluateSrt(Map<String, String> responses) async {
+    if (_backendUrl != null) {
+      final jsonMap = await _postJson('/api/evaluate/srt', {'responses': responses});
+      return SrtEvaluationModel.fromJson(jsonMap);
+    }
+
     if (_model == null) {
       throw Exception('Gemini API Key is missing. Please add GEMINI_API_KEY to your .env file.');
     }
@@ -220,6 +276,14 @@ Respond ONLY with valid JSON. Do not use Markdown block syntax (```json) around 
 
   /// Evaluates a TAT story using Gemini.
   Future<TatEvaluationModel> evaluateTat(String imageDescription, String story) async {
+    if (_backendUrl != null) {
+      final jsonMap = await _postJson('/api/evaluate/tat', {
+        'imageDescription': imageDescription,
+        'story': story,
+      });
+      return TatEvaluationModel.fromJson(jsonMap);
+    }
+
     if (_model == null) {
       throw Exception('Gemini API Key is missing. Please add GEMINI_API_KEY to your .env file.');
     }
@@ -286,6 +350,20 @@ Respond ONLY with valid JSON. Do not use Markdown block syntax around your respo
 
   /// Generates the next response from the Interviewing Officer (IO) during a mock interview.
   Future<String> generateInterviewResponse(PiqModel piq, List<Map<String, String>> chatHistory) async {
+    if (_backendUrl != null) {
+      final raw = await EvaluationPipelineService().run(
+        testType: 'INTERVIEW_REPLY',
+        payload: {
+          'piq': piq.toJson(),
+          'chatHistory': chatHistory,
+        },
+      );
+      final reply = (raw['reply'] as String?)?.trim();
+      return reply != null && reply.isNotEmpty
+          ? reply
+          : 'I see. Tell me more about that.';
+    }
+
     if (_model == null) {
       throw Exception('Gemini API Key is missing.');
     }

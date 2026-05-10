@@ -1,24 +1,35 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:ssb_ready_app/core/services/ai_evaluation_service.dart';
-import 'package:ssb_ready_app/domain/repositories/auth_repository.dart';
-import 'package:ssb_ready_app/domain/repositories/test_history_repository.dart';
-import 'package:ssb_ready_app/data/models/wat_result_model.dart';
+import 'package:ssb_ready_app/core/services/evaluation_pipeline_service.dart';
+import 'package:ssb_ready_app/data/models/wat_evaluation_model.dart';
 import 'package:ssb_ready_app/presentation/bloc/wat/wat_event.dart';
 import 'package:ssb_ready_app/presentation/bloc/wat/wat_state.dart';
 
 class WatBloc extends Bloc<WatEvent, WatState> {
-  final AuthRepository _authRepository;
-  final TestHistoryRepository _historyRepository;
+  final EvaluationPipelineService _evaluationPipeline;
   Timer? _timer;
 
   static const List<String> _sampleWords = [
-    'Attack', 'Mother', 'Fail', 'Leader', 'Defeat', 
-    'Courage', 'Afraid', 'Success', 'Weapon', 'Dark',
-    'Enemy', 'Help', 'Officer', 'Problem', 'Worry'
-  ]; // Using 15 words for practice instead of 60 to save API costs
+    'Attack',
+    'Mother',
+    'Fail',
+    'Leader',
+    'Defeat',
+    'Courage',
+    'Afraid',
+    'Success',
+    'Weapon',
+    'Dark',
+    'Enemy',
+    'Help',
+    'Officer',
+    'Problem',
+    'Worry'
+  ];
 
-  WatBloc(this._authRepository, this._historyRepository) : super(const WatState()) {
+  WatBloc({EvaluationPipelineService? evaluationPipeline})
+      : _evaluationPipeline = evaluationPipeline ?? EvaluationPipelineService(),
+        super(const WatState()) {
     on<StartWatTest>(_onStartWatTest);
     on<TickTimer>(_onTickTimer);
     on<SubmitSentence>(_onSubmitSentence);
@@ -51,19 +62,15 @@ class WatBloc extends Bloc<WatEvent, WatState> {
     if (state.timeRemaining > 0) {
       emit(state.copyWith(timeRemaining: state.timeRemaining - 1));
     }
-    // Note: When timeRemaining hits 0, the UI will intercept it in a BlocListener
-    // and fire SubmitSentence with the current text.
   }
 
   Future<void> _onSubmitSentence(SubmitSentence event, Emitter<WatState> emit) async {
     if (state.status != WatStatus.inProgress) return;
 
-    // Save response
     final updatedResponses = Map<String, String>.from(state.responses);
     updatedResponses[state.currentWord] = event.sentence.trim();
 
     if (state.currentWordIndex < state.words.length - 1) {
-      // Move to next word
       emit(state.copyWith(
         responses: updatedResponses,
         currentWordIndex: state.currentWordIndex + 1,
@@ -71,52 +78,35 @@ class WatBloc extends Bloc<WatEvent, WatState> {
       ));
       _startTimer();
     } else {
-      // Finish test
       _timer?.cancel();
       emit(state.copyWith(
         status: WatStatus.analyzing,
         responses: updatedResponses,
       ));
-      await _analyzeAndSave(emit, updatedResponses);
+      await _analyze(emit, updatedResponses);
     }
   }
 
-  Future<void> _analyzeAndSave(Emitter<WatState> emit, Map<String, String> responses) async {
+  Future<void> _analyze(Emitter<WatState> emit, Map<String, String> responses) async {
     try {
-      final aiService = await AiEvaluationService.initialize();
-      if (aiService == null) {
-        throw Exception('AI Service failed to initialize.');
+      final raw = await _evaluationPipeline.run(
+        testType: 'WAT',
+        payload: {'responses': responses},
+      );
+      final evalMap = raw['evaluation'];
+      if (evalMap is! Map<String, dynamic>) {
+        throw Exception('Invalid evaluation payload from server');
       }
-
-      // Convert responses to a single block of text for Gemini
-      final promptBuffer = StringBuffer();
-      promptBuffer.writeln('Evaluate the following Word Association Test responses for Officer Like Qualities (OLQs).');
-      responses.forEach((word, sentence) {
-        promptBuffer.writeln('Word: "$word" -> Sentence: "$sentence"');
-      });
-
-      // We reuse the existing evaluateStory method for simplicity, but pass the WAT prompt.
-      // Alternatively, AiEvaluationService should have a dedicated evaluateWat method.
-      // For now, we'll format it so the AI understands it's evaluating a list of WAT sentences.
-      final evaluation = await aiService.evaluateWat(responses);
-      final feedbackMarkdown = evaluation.toMarkdown();
+      final evaluation = WatEvaluationModel.fromJson(evalMap);
+      final feedbackMarkdown =
+          (raw['feedbackMarkdown'] as String?)?.trim().isNotEmpty == true
+              ? raw['feedbackMarkdown'] as String
+              : evaluation.toMarkdown();
 
       emit(state.copyWith(
         status: WatStatus.completed,
         feedback: feedbackMarkdown,
       ));
-
-      final user = await _authRepository.getCurrentUser();
-      if (user != null) {
-        final result = WatResultModel(
-          id: '',
-          userId: user.id,
-          responses: responses,
-          aiFeedback: feedbackMarkdown,
-          completedAt: DateTime.now(),
-        );
-        await _historyRepository.saveWatResult(result);
-      }
     } catch (e) {
       emit(state.copyWith(
         status: WatStatus.error,

@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// Adjust `users` rules if the mobile app still reads profile docs directly.
+// Result collections are intended to be written only by your Node backend (Admin SDK).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /ppdt_results/{id} {
+      allow read, write: if false;
+    }
+
+    match /tat_results/{id} {
+      allow read, write: if false;
+    }
+
+    match /oir_results/{id} {
+      allow read, write: if false;
+    }
+
+    match /wat_results/{id} {
+      allow read, write: if false;
+    }
+
+    match /srt_results/{id} {
+      allow read, write: if false;
+    }
+
+    match /piqs/{userId} {
+      allow read, write: if false;
+    }
+
+    match /oir_questions/{id} {
+      allow read, write: if false;
+    }
+  }
+}

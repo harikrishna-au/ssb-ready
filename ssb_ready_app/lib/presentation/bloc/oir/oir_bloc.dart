@@ -1,20 +1,20 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:ssb_ready_app/data/datasources/oir/mock_oir_data_source.dart';
+import 'package:ssb_ready_app/core/services/evaluation_pipeline_service.dart';
+import 'package:ssb_ready_app/data/datasources/oir/firestore_oir_data_source.dart';
 import 'package:ssb_ready_app/presentation/bloc/oir/oir_event.dart';
 import 'package:ssb_ready_app/presentation/bloc/oir/oir_state.dart';
 
-import 'package:ssb_ready_app/domain/repositories/auth_repository.dart';
-import 'package:ssb_ready_app/domain/repositories/test_history_repository.dart';
-import 'package:ssb_ready_app/data/models/oir_result_model.dart';
-
 class OirBloc extends Bloc<OirEvent, OirState> {
-  final MockOirDataSource _dataSource;
-  final AuthRepository _authRepository;
-  final TestHistoryRepository _historyRepository;
+  final FirestoreOirDataSource _dataSource;
+  final EvaluationPipelineService _evaluationPipeline;
   Timer? _timer;
 
-  OirBloc(this._dataSource, this._authRepository, this._historyRepository) : super(const OirState()) {
+  OirBloc(
+    this._dataSource, {
+    EvaluationPipelineService? evaluationPipeline,
+  })  : _evaluationPipeline = evaluationPipeline ?? EvaluationPipelineService(),
+        super(const OirState()) {
     on<StartOirTest>(_onStartOirTest);
     on<SubmitAnswer>(_onSubmitAnswer);
     on<NextQuestion>(_onNextQuestion);
@@ -22,18 +22,20 @@ class OirBloc extends Bloc<OirEvent, OirState> {
     on<TickTimer>(_onTickTimer);
   }
 
-  Future<void> _onStartOirTest(StartOirTest event, Emitter<OirState> emit) async {
+  Future<void> _onStartOirTest(
+      StartOirTest event, Emitter<OirState> emit) async {
     emit(state.copyWith(status: OirStatus.loading));
     try {
-      final questions = await _dataSource.getSampleQuestions();
+      final questions = await _dataSource.getQuestions();
       emit(state.copyWith(
         status: OirStatus.inProgress,
         questions: questions,
         currentQuestionIndex: 0,
         score: 0,
         timeRemaining: 600,
+        feedbackMarkdown: null,
       ));
-      
+
       _timer?.cancel();
       _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
         add(TickTimer());
@@ -58,7 +60,8 @@ class OirBloc extends Bloc<OirEvent, OirState> {
 
   void _onNextQuestion(NextQuestion event, Emitter<OirState> emit) {
     if (state.currentQuestionIndex < state.questions.length - 1) {
-      emit(state.copyWith(currentQuestionIndex: state.currentQuestionIndex + 1));
+      emit(
+          state.copyWith(currentQuestionIndex: state.currentQuestionIndex + 1));
     } else {
       _finishTest(emit);
     }
@@ -78,22 +81,26 @@ class OirBloc extends Bloc<OirEvent, OirState> {
 
   Future<void> _finishTest(Emitter<OirState> emit) async {
     _timer?.cancel();
-    emit(state.copyWith(status: OirStatus.finished));
+    emit(state.copyWith(status: OirStatus.analyzing));
 
     try {
-      final user = await _authRepository.getCurrentUser();
-      if (user != null) {
-        final result = OirResultModel(
-          id: '',
-          userId: user.id,
-          score: state.score,
-          totalQuestions: state.questions.length,
-          completedAt: DateTime.now(),
-        );
-        await _historyRepository.saveOirResult(result);
-      }
-    } catch (e) {
-      // Handle or log error gracefully
+      final raw = await _evaluationPipeline.run(
+        testType: 'OIR',
+        payload: {
+          'score': state.score,
+          'totalQuestions': state.questions.length,
+        },
+      );
+      final md = raw['feedbackMarkdown'] as String?;
+      emit(state.copyWith(
+        status: OirStatus.finished,
+        feedbackMarkdown: md?.trim().isNotEmpty == true ? md : null,
+      ));
+    } catch (_) {
+      emit(state.copyWith(
+        status: OirStatus.finished,
+        feedbackMarkdown: null,
+      ));
     }
   }
 

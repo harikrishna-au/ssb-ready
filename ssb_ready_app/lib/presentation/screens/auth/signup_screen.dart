@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ssb_ready_app/core/theme/app_colors.dart';
 import 'package:ssb_ready_app/core/utils/validators.dart';
 import 'package:ssb_ready_app/presentation/bloc/auth/auth_bloc.dart';
+import 'package:ssb_ready_app/presentation/widgets/app_brand_logo.dart';
 import 'package:ssb_ready_app/presentation/widgets/auth/custom_text_field.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -118,7 +119,7 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthFailureState) {
@@ -134,302 +135,338 @@ class _SignupScreenState extends State<SignupScreen> {
         child: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
             final isLoading = state is AuthLoading;
-
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 40),
-                  Text(
-                    'Join SSBReady',
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryGreen,
+            return Stack(
+              children: [
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFF0C3A32),
+                        Color(0xFF4B57C5),
+                        AppColors.background
+                      ],
+                      stops: [0, 0.24, 0.7],
+                    ),
+                  ),
+                ),
+                SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 8),
+                        const Center(
+                          child: AppBrandLogo(size: 88, borderRadius: 22),
                         ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Begin your SSB preparation journey',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey[600],
+                        const SizedBox(height: 16),
+                        Text(
+                          'Join SSBReady',
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineLarge
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
                         ),
-                  ),
-                  const SizedBox(height: 32),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CustomTextField(
-                          label: 'First Name',
-                          hint: 'First name',
-                          controller: _firstNameController,
-                          focusNode: _firstNameFocusNode,
-                          errorText: _firstNameError,
-                          onChanged: (_) {
-                            if (_firstNameError != null) {
-                              setState(() {
-                                _firstNameError = Validators.validateName(
-                                    _firstNameController.text);
-                              });
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: CustomTextField(
-                          label: 'Last Name',
-                          hint: 'Last name',
-                          controller: _lastNameController,
-                          focusNode: _lastNameFocusNode,
-                          errorText: _lastNameError,
-                          onChanged: (_) {
-                            if (_lastNameError != null) {
-                              setState(() {
-                                _lastNameError = Validators.validateName(
-                                    _lastNameController.text);
-                              });
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  CustomTextField(
-                    label: 'Email',
-                    hint: 'Enter your email',
-                    keyboardType: TextInputType.emailAddress,
-                    controller: _emailController,
-                    focusNode: _emailFocusNode,
-                    errorText: _emailError,
-                    onChanged: (_) {
-                      if (_emailError != null) {
-                        setState(() {
-                          _emailError =
-                              Validators.validateEmail(_emailController.text);
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  CustomTextField(
-                    label: 'Password',
-                    hint: 'Create a password',
-                    controller: _passwordController,
-                    focusNode: _passwordFocusNode,
-                    errorText: _passwordError,
-                    isPassword: true,
-                    onChanged: (_) {
-                      if (_passwordError != null) {
-                        setState(() {
-                          _passwordError = Validators.validatePassword(
-                              _passwordController.text);
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  CustomTextField(
-                    label: 'Confirm Password',
-                    hint: 'Confirm your password',
-                    controller: _confirmPasswordController,
-                    focusNode: _confirmPasswordFocusNode,
-                    errorText: _confirmPasswordError,
-                    isPassword: true,
-                    onChanged: (_) {
-                      if (_confirmPasswordError != null) {
-                        setState(() {
-                          if (_passwordController.text !=
-                              _confirmPasswordController.text) {
-                            _confirmPasswordError = 'Passwords do not match';
-                          } else {
-                            _confirmPasswordError = null;
-                          }
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: Checkbox(
-                          value: _termsAccepted,
-                          onChanged: (value) {
-                            setState(() {
-                              _termsAccepted = value ?? false;
-                            });
-                          },
-                          activeColor: AppColors.primaryGreen,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: RichText(
-                            text: TextSpan(
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: Colors.grey[700],
+                        const SizedBox(height: 10),
+                        Text(
+                          'Begin your SSB preparation journey',
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.88),
                                   ),
-                              children: [
-                                const TextSpan(
-                                  text: 'I agree to the ',
-                                ),
-                                TextSpan(
-                                  text: 'Terms & Conditions',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: AppColors.primaryGreen,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                                const TextSpan(
-                                  text: ' and ',
-                                ),
-                                TextSpan(
-                                  text: 'Privacy Policy',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: AppColors.primaryGreen,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                              ],
+                        ),
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: AppColors.glass,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.4),
                             ),
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: isLoading ? null : _handleSignup,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryGreen,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: Colors.grey[300],
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: isLoading
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: CustomTextField(
+                                      label: 'First Name',
+                                      hint: 'First name',
+                                      controller: _firstNameController,
+                                      focusNode: _firstNameFocusNode,
+                                      errorText: _firstNameError,
+                                      onChanged: (_) {
+                                        if (_firstNameError != null) {
+                                          setState(() {
+                                            _firstNameError =
+                                                Validators.validateName(
+                                                    _firstNameController.text);
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: CustomTextField(
+                                      label: 'Last Name',
+                                      hint: 'Last name',
+                                      controller: _lastNameController,
+                                      focusNode: _lastNameFocusNode,
+                                      errorText: _lastNameError,
+                                      onChanged: (_) {
+                                        if (_lastNameError != null) {
+                                          setState(() {
+                                            _lastNameError =
+                                                Validators.validateName(
+                                                    _lastNameController.text);
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                              CustomTextField(
+                                label: 'Email',
+                                hint: 'Enter your email',
+                                keyboardType: TextInputType.emailAddress,
+                                controller: _emailController,
+                                focusNode: _emailFocusNode,
+                                errorText: _emailError,
+                                onChanged: (_) {
+                                  if (_emailError != null) {
+                                    setState(() {
+                                      _emailError = Validators.validateEmail(
+                                          _emailController.text);
+                                    });
+                                  }
+                                },
+                              ),
+                              const SizedBox(height: 24),
+                              CustomTextField(
+                                label: 'Password',
+                                hint: 'Create a password',
+                                controller: _passwordController,
+                                focusNode: _passwordFocusNode,
+                                errorText: _passwordError,
+                                isPassword: true,
+                                onChanged: (_) {
+                                  if (_passwordError != null) {
+                                    setState(() {
+                                      _passwordError =
+                                          Validators.validatePassword(
+                                              _passwordController.text);
+                                    });
+                                  }
+                                },
+                              ),
+                              const SizedBox(height: 24),
+                              CustomTextField(
+                                label: 'Confirm Password',
+                                hint: 'Confirm your password',
+                                controller: _confirmPasswordController,
+                                focusNode: _confirmPasswordFocusNode,
+                                errorText: _confirmPasswordError,
+                                isPassword: true,
+                                onChanged: (_) {
+                                  if (_confirmPasswordError != null) {
+                                    setState(() {
+                                      if (_passwordController.text !=
+                                          _confirmPasswordController.text) {
+                                        _confirmPasswordError =
+                                            'Passwords do not match';
+                                      } else {
+                                        _confirmPasswordError = null;
+                                      }
+                                    });
+                                  }
+                                },
+                              ),
+                              const SizedBox(height: 24),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: Checkbox(
+                                      value: _termsAccepted,
+                                      onChanged: (value) {
+                                        setState(() {
+                                          _termsAccepted = value ?? false;
+                                        });
+                                      },
+                                      activeColor: AppColors.primaryGreen,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: RichText(
+                                        text: TextSpan(
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: Colors.grey[700],
+                                              ),
+                                          children: [
+                                            const TextSpan(
+                                              text: 'I agree to the ',
+                                            ),
+                                            TextSpan(
+                                              text: 'Terms & Conditions',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color:
+                                                        AppColors.primaryGreen,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                            ),
+                                            const TextSpan(
+                                              text: ' and ',
+                                            ),
+                                            TextSpan(
+                                              text: 'Privacy Policy',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color:
+                                                        AppColors.primaryGreen,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 32),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 56,
+                                child: ElevatedButton(
+                                  onPressed: isLoading ? null : _handleSignup,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.secondary,
+                                    disabledBackgroundColor: AppColors.textHint,
+                                  ),
+                                  child: isLoading
+                                      ? const SizedBox(
+                                          height: 24,
+                                          width: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
+                                          ),
+                                        )
+                                      : const Text('Create Account'),
                                 ),
                               ),
-                            )
-                          : Text(
-                              'Create Account',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelLarge
-                                  ?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                              const SizedBox(height: 24),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Divider(
+                                      color: Colors.grey[300],
+                                      thickness: 1,
+                                    ),
                                   ),
-                            ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16),
+                                    child: Text(
+                                      'OR',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: Colors.grey[600],
+                                          ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Divider(
+                                      color: Colors.grey[300],
+                                      thickness: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 56,
+                                child: OutlinedButton.icon(
+                                  onPressed:
+                                      isLoading ? null : _handleGoogleSignup,
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                  ),
+                                  icon: const Icon(Icons.g_mobiledata_rounded,
+                                      size: 26),
+                                  label: const Text('Sign up with Google'),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Already have an account? ',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: Colors.grey[600],
+                                        ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () => Navigator.of(context)
+                                        .pushNamed('/login'),
+                                    child: Text(
+                                      'Sign In',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: AppColors.primaryGreen,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 40),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Divider(
-                          color: Colors.grey[300],
-                          thickness: 1,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'OR',
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: Colors.grey[600],
-                                  ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Divider(
-                          color: Colors.grey[300],
-                          thickness: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: OutlinedButton.icon(
-                      onPressed: isLoading ? null : _handleGoogleSignup,
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                          color: Colors.grey[300]!,
-                          width: 1,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: const Icon(Icons.login, size: 20),
-                      label: Text(
-                        'Sign up with Google',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: Colors.black87,
-                            ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Already have an account? ',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                      ),
-                      GestureDetector(
-                        onTap: () => Navigator.of(context).pushNamed('/login'),
-                        child: Text(
-                          'Sign In',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppColors.primaryGreen,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 40),
-                ],
-              ),
+                ),
+              ],
             );
           },
         ),

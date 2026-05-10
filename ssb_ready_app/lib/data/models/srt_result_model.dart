@@ -25,12 +25,15 @@ class SrtResultModel {
   }
 
   factory SrtResultModel.fromJson(Map<String, dynamic> json, String documentId) {
+    final completedAtRaw = json['completedAt'];
     return SrtResultModel(
       id: documentId,
       userId: json['userId'] ?? '',
       responses: Map<String, String>.from(json['responses'] ?? {}),
       aiFeedback: json['aiFeedback'] ?? '',
-      completedAt: (json['completedAt'] as Timestamp).toDate(),
+      completedAt: completedAtRaw is Timestamp
+          ? completedAtRaw.toDate()
+          : DateTime.tryParse((completedAtRaw ?? '').toString()) ?? DateTime.now(),
     );
   }
 }

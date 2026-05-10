@@ -1,7 +1,9 @@
 import 'package:equatable/equatable.dart';
 import 'package:ssb_ready_app/domain/entities/oir/question.dart';
 
-enum OirStatus { initial, loading, inProgress, finished, error }
+enum OirStatus { initial, loading, inProgress, analyzing, finished, error }
+
+const Object _feedbackUnset = Object();
 
 class OirState extends Equatable {
   final OirStatus status;
@@ -10,14 +12,17 @@ class OirState extends Equatable {
   final int score;
   final int timeRemaining; // in seconds
   final String? errorMessage;
+  /// Populated after `/api/evaluation/run` (OIR) completes.
+  final String? feedbackMarkdown;
 
   const OirState({
     this.status = OirStatus.initial,
     this.questions = const [],
     this.currentQuestionIndex = 0,
     this.score = 0,
-    this.timeRemaining = 600, // 10 minutes default
+    this.timeRemaining = 600,
     this.errorMessage,
+    this.feedbackMarkdown,
   });
 
   OirState copyWith({
@@ -27,6 +32,7 @@ class OirState extends Equatable {
     int? score,
     int? timeRemaining,
     String? errorMessage,
+    Object? feedbackMarkdown = _feedbackUnset,
   }) {
     return OirState(
       status: status ?? this.status,
@@ -35,6 +41,9 @@ class OirState extends Equatable {
       score: score ?? this.score,
       timeRemaining: timeRemaining ?? this.timeRemaining,
       errorMessage: errorMessage ?? this.errorMessage,
+      feedbackMarkdown: feedbackMarkdown == _feedbackUnset
+          ? this.feedbackMarkdown
+          : feedbackMarkdown as String?,
     );
   }
 
@@ -46,5 +55,6 @@ class OirState extends Equatable {
         score,
         timeRemaining,
         errorMessage,
+        feedbackMarkdown,
       ];
 }

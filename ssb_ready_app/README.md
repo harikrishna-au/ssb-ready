@@ -69,3 +69,43 @@ lib/
 │   └── responsive_layout.dart
 ├── widgets/             # Shared components (buttons, cards, etc.)
 └── main.dart            # App entry point
+
+---
+
+## Backend (Render-ready)
+
+This repository now includes a production backend at `backend/` for AI evaluation endpoints.
+
+### Local backend run
+
+```bash
+cd backend
+cp .env.example .env
+# set GEMINI_API_KEY in backend/.env
+npm install
+npm start
+```
+
+Health check:
+
+```bash
+curl http://localhost:3000/health
+```
+
+### Render deploy
+
+- `render.yaml` is included at repo root.
+- Service root is `backend`.
+- Set secret env var in Render:
+  - `GEMINI_API_KEY`
+
+### Flutter app config for backend mode
+
+In app `.env`, set:
+
+```env
+BACKEND_URL=https://your-render-service-url.onrender.com
+```
+
+When `BACKEND_URL` is set, app routes AI calls through backend (recommended for production).  
+If `BACKEND_URL` is not set, app falls back to direct Gemini usage via `GEMINI_API_KEY`.

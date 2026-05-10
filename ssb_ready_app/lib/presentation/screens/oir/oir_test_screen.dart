@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:ssb_ready_app/core/theme/app_colors.dart';
 import 'package:ssb_ready_app/presentation/bloc/oir/oir_bloc.dart';
 import 'package:ssb_ready_app/presentation/bloc/oir/oir_event.dart';
@@ -11,10 +12,9 @@ class OirTestScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('OIR Practice Test'),
-        centerTitle: true,
         actions: [
           _buildTimer(context),
           const SizedBox(width: 16),
@@ -23,7 +23,12 @@ class OirTestScreen extends StatelessWidget {
       body: BlocConsumer<OirBloc, OirState>(
         listener: (context, state) {
           if (state.status == OirStatus.finished) {
-            _showResultsDialog(context, state.score, state.questions.length);
+            _showResultsDialog(
+              context,
+              state.score,
+              state.questions.length,
+              state.feedbackMarkdown,
+            );
           }
         },
         builder: (context, state) {
@@ -37,6 +42,10 @@ class OirTestScreen extends StatelessWidget {
 
           if (state.status == OirStatus.inProgress) {
             return _buildQuizContent(context, state);
+          }
+
+          if (state.status == OirStatus.analyzing) {
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (state.status == OirStatus.error) {
@@ -55,12 +64,15 @@ class OirTestScreen extends StatelessWidget {
         final minutes = (state.timeRemaining / 60).floor();
         final seconds = (state.timeRemaining % 60);
         return Chip(
-          avatar: const Icon(Icons.timer_outlined, size: 18),
+          avatar: const Icon(Icons.timer_outlined, size: 16),
           label: Text(
             '$minutes:${seconds.toString().padLeft(2, '0')}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: const TextStyle(fontWeight: FontWeight.w700),
           ),
-          backgroundColor: state.timeRemaining < 60 ? Colors.red[50] : Colors.blue[50],
+          side: BorderSide.none,
+          backgroundColor: state.timeRemaining < 60
+              ? AppColors.error.withValues(alpha: 0.14)
+              : AppColors.secondary.withValues(alpha: 0.12),
         );
       },
     );
@@ -71,27 +83,36 @@ class OirTestScreen extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.psychology, size: 100, color: AppColors.primaryGreen),
+          Container(
+            height: 96,
+            width: 96,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: AppColors.brandGradient,
+              ),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: const Icon(Icons.psychology_alt_outlined,
+                size: 44, color: Colors.white),
+          ),
           const SizedBox(height: 24),
           const Text(
             'Ready for OIR Practice?',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 16),
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 40),
             child: Text(
               'This test contains verbal and non-verbal reasoning questions. You have 10 minutes.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+              style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
             ),
           ),
           const SizedBox(height: 40),
           ElevatedButton(
             onPressed: () => context.read<OirBloc>().add(StartOirTest()),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryGreen,
-              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
             ),
             child: const Text('START TEST', style: TextStyle(fontSize: 18)),
@@ -111,46 +132,68 @@ class OirTestScreen extends StatelessWidget {
         children: [
           LinearProgressIndicator(
             value: (state.currentQuestionIndex + 1) / state.questions.length,
-            backgroundColor: Colors.grey[200],
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryGreen),
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(999),
+            backgroundColor: AppColors.divider,
+            valueColor:
+                const AlwaysStoppedAnimation<Color>(AppColors.secondary),
           ),
           const SizedBox(height: 32),
           Text(
             'Question ${state.currentQuestionIndex + 1} of ${state.questions.length}',
-            style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryGreen),
+            style: const TextStyle(
+                fontWeight: FontWeight.w700, color: AppColors.secondary),
           ),
           const SizedBox(height: 16),
           Text(
             question.text,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500, height: 1.4),
+            style: const TextStyle(
+                fontSize: 21, fontWeight: FontWeight.w600, height: 1.35),
           ),
           const SizedBox(height: 32),
           ...question.options.asMap().entries.map((entry) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 16.0),
-              child: InkWell(
-                onTap: () => context.read<OirBloc>().add(SubmitAnswer(entry.key)),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 14,
-                        backgroundColor: AppColors.primaryGreen.withValues(alpha: 0.1),
-                        child: Text(
-                          String.fromCharCode(65 + entry.key),
-                          style: const TextStyle(fontSize: 12, color: AppColors.primaryGreen),
+              child: Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                shadowColor: AppColors.primary.withValues(alpha: 0.12),
+                elevation: 0.6,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: () =>
+                      context.read<OirBloc>().add(SubmitAnswer(entry.key)),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 14,
+                          backgroundColor:
+                              AppColors.secondary.withValues(alpha: 0.12),
+                          child: Text(
+                            String.fromCharCode(65 + entry.key),
+                            style: const TextStyle(
+                                fontSize: 12, color: AppColors.secondary),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(entry.value, style: const TextStyle(fontSize: 16)),
-                      ),
-                    ],
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            entry.value,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -162,7 +205,8 @@ class OirTestScreen extends StatelessWidget {
             children: [
               TextButton(
                 onPressed: () => context.read<OirBloc>().add(SkipQuestion()),
-                child: const Text('SKIP', style: TextStyle(color: Colors.grey)),
+                child: const Text('SKIP',
+                    style: TextStyle(color: AppColors.textSecondary)),
               ),
             ],
           ),
@@ -171,29 +215,60 @@ class OirTestScreen extends StatelessWidget {
     );
   }
 
-  void _showResultsDialog(BuildContext context, int score, int total) {
+  void _showResultsDialog(
+    BuildContext context,
+    int score,
+    int total,
+    String? feedbackMarkdown,
+  ) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text('Test Completed!'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.stars, color: Colors.orange, size: 60),
-            const SizedBox(height: 16),
-            Text(
-              'Your Score: $score / $total',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _getRatingMessage(score, total),
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.stars, color: AppColors.accent, size: 58),
+              const SizedBox(height: 16),
+              Text(
+                'Your Score: $score / $total',
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _getRatingMessage(score, total),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
+              if (feedbackMarkdown != null && feedbackMarkdown.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                const Divider(),
+                const SizedBox(height: 12),
+                MarkdownBody(
+                  data: feedbackMarkdown,
+                  styleSheet: MarkdownStyleSheet(
+                    p: const TextStyle(
+                      fontSize: 15,
+                      height: 1.45,
+                      color: AppColors.textPrimary,
+                    ),
+                    h2: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                    strong: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
         actions: [
           TextButton(

@@ -34,7 +34,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(const AuthUnauthenticated());
       }
     } catch (e) {
-      emit(AuthFailureState(failure: AuthFailure.sessionExpired()));
+      // Treat startup session errors as logged out so routing can show login.
+      emit(const AuthUnauthenticated());
     }
   }
 
@@ -91,7 +92,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthAuthenticated(user: user));
     } catch (e) {
       debugPrint('Google SignIn Error: $e');
-      emit(AuthFailureState(failure: AuthFailure.googleSignInFailed()));
+      emit(
+        AuthFailureState(
+          failure: AuthFailure.googleSignInFailed(
+            message: e.toString(),
+          ),
+        ),
+      );
     }
   }
 

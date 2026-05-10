@@ -1,0 +1,22 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Deploy: New → Blueprint → connect repo → apply (set secret env vars in the dashboard).
+
+services:
+  - type: web
+    name: ssb-backend
+    runtime: node
+    region: singapore
+    plan: free
+    rootDir: ssb_backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      # Set in dashboard after first deploy: https://<service>.onrender.com (no trailing slash).
+      - key: PUBLIC_URL
+        sync: false
+      # Render injects PORT automatically; do not set PORT here.

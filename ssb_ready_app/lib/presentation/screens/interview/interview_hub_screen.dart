@@ -1,3 +1,4 @@
+import 'package:ssb_ready_app/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class InterviewHubScreen extends StatelessWidget {
@@ -6,29 +7,44 @@ class InterviewHubScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Interview Preparation'),
-        backgroundColor: Colors.purple[700],
-        foregroundColor: Colors.white,
-        elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeaderCard(),
-            const SizedBox(height: 28),
+            const SizedBox(height: 26),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const Text(
+                'PERSONAL INTERVIEW TRACK',
+                style: TextStyle(
+                  color: AppColors.secondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             const Text(
               'Preparation Modules',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 16),
             _buildMenuCard(
               context,
               title: 'Digital PIQ Form',
-              description: 'Fill your Personal Information Questionnaire. The foundation of your interview.',
+              description:
+                  'Fill your Personal Information Questionnaire. The foundation of your interview.',
               icon: Icons.assignment_outlined,
               color: Colors.blue[600]!,
               onTap: () => Navigator.pushNamed(context, '/piq-form'),
@@ -37,7 +53,8 @@ class InterviewHubScreen extends StatelessWidget {
             _buildMenuCard(
               context,
               title: 'AI Mock Interview',
-              description: 'Face a realistic interview based on your PIQ. Get instant feedback.',
+              description:
+                  'Face a realistic interview based on your PIQ. Get instant feedback.',
               icon: Icons.record_voice_over_outlined,
               color: Colors.purple[600]!,
               onTap: () => Navigator.pushNamed(context, '/mock-interview'),
@@ -46,12 +63,14 @@ class InterviewHubScreen extends StatelessWidget {
             _buildMenuCard(
               context,
               title: 'Common Questions',
-              description: 'Library of frequently asked questions with expert guidance.',
+              description:
+                  'Library of frequently asked questions with expert guidance.',
               icon: Icons.question_answer_outlined,
               color: Colors.orange[700]!,
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Question bank coming in next update!')),
+                  const SnackBar(
+                      content: Text('Question bank coming in next update!')),
                 );
               },
             ),
@@ -65,15 +84,15 @@ class InterviewHubScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.purple[700]!, Colors.purple[500]!],
+        gradient: const LinearGradient(
+          colors: [Color(0xFF5747F3), Color(0xFF8B80FF)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: Colors.purple.withValues(alpha: 0.3),
+            color: AppColors.secondary.withValues(alpha: 0.28),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -87,7 +106,8 @@ class InterviewHubScreen extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(15),
             ),
-            child: const Icon(Icons.mic, color: Colors.white, size: 36),
+            child:
+                const Icon(Icons.forum_outlined, color: Colors.white, size: 36),
           ),
           const SizedBox(width: 20),
           Expanded(
@@ -96,12 +116,20 @@ class InterviewHubScreen extends StatelessWidget {
               children: [
                 const Text(
                   'Interview Mastery',
-                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'The Interviewing Officer looks for clarity, honesty, and confidence.',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.82),
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
                 ),
               ],
             ),
@@ -119,57 +147,65 @@ class InterviewHubScreen extends StatelessWidget {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        splashColor: color.withValues(alpha: 0.09),
+        highlightColor: color.withValues(alpha: 0.05),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: color.withValues(alpha: 0.15)),
+            boxShadow: [
+              BoxShadow(
                 color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                  ),
-                ],
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 28),
               ),
-            ),
-            const Icon(Icons.chevron_right, color: Colors.grey),
-          ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded,
+                  color: color.withValues(alpha: 0.8)),
+            ],
+          ),
         ),
       ),
     );
   }
-}
-
-// Extension to avoid 'withValues' missing error if needed, though we should use the new API
-extension ColorOpacity on Color {
-  Color get whiteb70 => withValues(alpha: 0.7);
 }

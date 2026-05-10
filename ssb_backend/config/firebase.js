@@ -1,18 +1,43 @@
 const admin = require('firebase-admin');
-require('dotenv').config();
+const { config } = require('./index');
 
-// Using environment variables for Firebase configuration as per your request
 const firebaseConfig = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  projectId: config.firebase.projectId,
+  storageBucket: config.firebase.storageBucket
 };
 
+function parseServiceAccountJson() {
+  const raw = config.firebase.serviceAccountJson;
+  if (raw == null || typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  try {
+    return JSON.parse(trimmed);
+  } catch (e) {
+    console.error('FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON:', e.message);
+    throw e;
+  }
+}
+
 if (!admin.apps.length) {
-  if (firebaseConfig.projectId) {
-    admin.initializeApp(firebaseConfig);
+  const sa = parseServiceAccountJson();
+
+  if (sa) {
+    admin.initializeApp({
+      credential: admin.credential.cert(sa),
+      projectId: firebaseConfig.projectId || sa.project_id,
+      storageBucket: firebaseConfig.storageBucket || undefined
+    });
+    console.log(
+      `Firebase Admin initialized with service account (${firebaseConfig.projectId || sa.project_id})`
+    );
+  } else if (firebaseConfig.projectId) {
+    admin.initializeApp({
+      ...firebaseConfig
+    });
     console.log(`Firebase initialized with Project ID: ${firebaseConfig.projectId}`);
   } else {
-    console.warn('Warning: FIREBASE_PROJECT_ID is missing in .env');
+    console.warn('Warning: FIREBASE_PROJECT_ID is missing and no FIREBASE_SERVICE_ACCOUNT_JSON');
     admin.initializeApp();
   }
 }

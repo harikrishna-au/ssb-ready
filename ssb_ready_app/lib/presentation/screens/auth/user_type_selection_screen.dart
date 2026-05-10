@@ -4,6 +4,62 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ssb_ready_app/core/theme/app_colors.dart';
 import 'package:ssb_ready_app/presentation/bloc/auth/auth_bloc.dart';
 
+/// Route wrapper: Fresher/Repeater is only shown after Firebase auth.
+class UserTypeSelectionGate extends StatelessWidget {
+  const UserTypeSelectionGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        if (state is AuthAuthenticated) {
+          final fromRoute =
+              ModalRoute.of(context)?.settings.arguments as String?;
+          final email = (fromRoute != null && fromRoute.isNotEmpty)
+              ? fromRoute
+              : state.user.email;
+          return UserTypeSelectionScreen(
+            userEmail: email.isEmpty ? state.user.email : email,
+          );
+        }
+        return const _MustSignInFirstRedirect();
+      },
+    );
+  }
+}
+
+class _MustSignInFirstRedirect extends StatefulWidget {
+  const _MustSignInFirstRedirect();
+
+  @override
+  State<_MustSignInFirstRedirect> createState() =>
+      _MustSignInFirstRedirectState();
+}
+
+class _MustSignInFirstRedirectState extends State<_MustSignInFirstRedirect> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(
+          color: AppColors.primary.withValues(alpha: 0.7),
+        ),
+      ),
+    );
+  }
+}
+
 class UserTypeSelectionScreen extends StatefulWidget {
   final String userEmail;
 
@@ -24,10 +80,9 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is AuthAuthenticated &&
-            state.user.userType?.isNotEmpty == true) {
-          Navigator.of(context).pushReplacementNamed('/dashboard');
-        } else if (state is AuthFailureState) {
+        // `/dashboard` routing is handled by the root [BlocListener] in [App]
+        // when [UpdateUserTypeEvent] completes and userType is set.
+        if (state is AuthFailureState) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.failure.message),
@@ -39,13 +94,15 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
       builder: (context, state) {
         final isLoading = state is AuthLoading;
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: AppColors.background,
           appBar: AppBar(
-            backgroundColor: Colors.white,
-            elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.black),
-              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back),
+              tooltip: 'Sign out',
+              onPressed: () {
+                FocusScope.of(context).unfocus();
+                context.read<AuthBloc>().add(const SignOutEvent());
+              },
             ),
           ),
           body: SingleChildScrollView(
@@ -57,24 +114,32 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
                 Text(
                   'Join SSBReady',
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryGreen,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
                       ),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'Which category best describes you?',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey[700],
+                        color: AppColors.textSecondary,
                       ),
                 ),
-                const SizedBox(height: 48),
-                // First Timer Card
+                const SizedBox(height: 8),
+                Text(
+                  'Finish this step after signing in or creating an account — '
+                  'we use it to personalize your prep.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textHint,
+                      ),
+                ),
+                const SizedBox(height: 40),
+                // Fresher Card (stored as first_timer)
                 _buildUserTypeCard(
                   context,
-                  title: 'First Timer',
+                  title: 'Fresher',
                   description:
-                      'This is my first SSB attempt. I need step-by-step guidance.',
+                      'First SSB attempt — I want clear, step‑by‑step guidance.',
                   icon: Icons.explore,
                   value: 'first_timer',
                 ),
@@ -98,12 +163,8 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
                         ? null
                         : _handleContinue,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryGreen,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey[300],
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      backgroundColor: AppColors.secondary,
+                      disabledBackgroundColor: AppColors.textHint,
                     ),
                     child: isLoading
                         ? const SizedBox(
@@ -143,90 +204,94 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
     required String value,
   }) {
     final isSelected = _selectedUserType == value;
+    const radius = 18.0;
 
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedUserType = value;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primaryGreen.withValues(alpha: 0.05)
-              : Colors.white,
-          border: Border.all(
-            color: isSelected ? AppColors.primaryGreen : Colors.grey[300]!,
+    void select() {
+      FocusScope.of(context).unfocus();
+      setState(() => _selectedUserType = value);
+    }
+
+    // One InkWell for the whole card (no nested Radio gestures). Wide hit target:
+    // `SizedBox(width: infinity)` avoids narrow intrinsic-width rows on some layouts.
+    // Selection stays enabled during AuthBloc loading — only "Continue" is disabled,
+    // so radios are never unintentionally greyed out.
+    return SizedBox(
+      width: double.infinity,
+      child: Material(
+        color: isSelected
+            ? AppColors.secondary.withValues(alpha: 0.07)
+            : Colors.white,
+        elevation: isSelected ? 2 : 0,
+        shadowColor: AppColors.secondary.withValues(alpha: 0.18),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radius),
+          side: BorderSide(
+            color: isSelected ? AppColors.secondary : AppColors.border,
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(12),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.primaryGreen : Colors.grey[200],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                color: isSelected ? Colors.white : Colors.grey[600],
-                size: 28,
-              ),
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryGreen,
-                        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: select,
+          borderRadius: BorderRadius.circular(radius),
+          splashColor: AppColors.secondary.withValues(alpha: 0.12),
+          highlightColor: AppColors.secondary.withValues(alpha: 0.06),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.secondary
+                        : AppColors.surfaceSoft,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    description,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  child: Icon(
+                    icon,
+                    color: isSelected ? Colors.white : AppColors.textSecondary,
+                    size: 28,
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color:
-                      isSelected ? AppColors.primaryGreen : Colors.grey[300]!,
-                  width: 2,
                 ),
-              ),
-              child: isSelected
-                  ? Center(
-                      child: Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.primaryGreen,
-                        ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
                       ),
-                    )
-                  : null,
+                      const SizedBox(height: 6),
+                      Text(
+                        description,
+                        style:
+                            Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Icon(
+                  isSelected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: isSelected ? AppColors.secondary : AppColors.border,
+                  size: 28,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -1,15 +1,12 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:ssb_ready_app/core/services/ai_evaluation_service.dart';
-import 'package:ssb_ready_app/domain/repositories/auth_repository.dart';
-import 'package:ssb_ready_app/domain/repositories/test_history_repository.dart';
-import 'package:ssb_ready_app/data/models/srt_result_model.dart';
+import 'package:ssb_ready_app/core/services/evaluation_pipeline_service.dart';
+import 'package:ssb_ready_app/data/models/srt_evaluation_model.dart';
 import 'package:ssb_ready_app/presentation/bloc/srt/srt_event.dart';
 import 'package:ssb_ready_app/presentation/bloc/srt/srt_state.dart';
 
 class SrtBloc extends Bloc<SrtEvent, SrtState> {
-  final AuthRepository _authRepository;
-  final TestHistoryRepository _historyRepository;
+  final EvaluationPipelineService _evaluationPipeline;
   Timer? _timer;
 
   static const List<String> _sampleSituations = [
@@ -25,11 +22,14 @@ class SrtBloc extends Bloc<SrtEvent, SrtState> {
     'He received news of his selection for the academy but his family was facing a severe financial crisis. He...',
   ];
 
-  SrtBloc(this._authRepository, this._historyRepository) : super(const SrtState()) {
+  SrtBloc({EvaluationPipelineService? evaluationPipeline})
+      : _evaluationPipeline = evaluationPipeline ?? EvaluationPipelineService(),
+        super(const SrtState()) {
     on<StartSrtTest>(_onStartSrtTest);
     on<TickTimer>(_onTickTimer);
     on<SubmitReaction>(_onSubmitReaction);
     on<NextSituation>(_onNextSituation);
+    on<FinishSrtOnTimeout>(_onFinishSrtOnTimeout);
   }
 
   void _onStartSrtTest(StartSrtTest event, Emitter<SrtState> emit) {
@@ -37,7 +37,7 @@ class SrtBloc extends Bloc<SrtEvent, SrtState> {
       status: SrtStatus.inProgress,
       situations: _sampleSituations,
       currentSituationIndex: 0,
-      globalTimeRemaining: 300, // 5 minutes
+      globalTimeRemaining: 300,
       responses: {},
       feedback: null,
       errorMessage: null,
@@ -59,7 +59,6 @@ class SrtBloc extends Bloc<SrtEvent, SrtState> {
     if (state.globalTimeRemaining > 0) {
       emit(state.copyWith(globalTimeRemaining: state.globalTimeRemaining - 1));
     }
-    // When timer hits 0, the UI will intercept and trigger finalization
   }
 
   void _onSubmitReaction(SubmitReaction event, Emitter<SrtState> emit) {
@@ -79,51 +78,59 @@ class SrtBloc extends Bloc<SrtEvent, SrtState> {
         currentSituationIndex: state.currentSituationIndex + 1,
       ));
     } else {
-      // All situations answered, finish test
-      await _finishTest(emit);
+      await _finishTest(emit, responses: state.responses);
     }
   }
 
-  Future<void> _finishTest(Emitter<SrtState> emit) async {
+  Future<void> _onFinishSrtOnTimeout(
+      FinishSrtOnTimeout event, Emitter<SrtState> emit) async {
+    if (state.status != SrtStatus.inProgress) return;
+
+    final merged = Map<String, String>.from(state.responses);
+    for (var i = state.currentSituationIndex; i < state.situations.length; i++) {
+      final s = state.situations[i];
+      if (i == state.currentSituationIndex) {
+        merged[s] = event.partialReaction.trim();
+      } else {
+        merged[s] = (merged[s] ?? '').trim();
+      }
+    }
+
+    await _finishTest(emit, responses: merged);
+  }
+
+  Future<void> _finishTest(
+    Emitter<SrtState> emit, {
+    required Map<String, String> responses,
+  }) async {
     _timer?.cancel();
-    emit(state.copyWith(status: SrtStatus.analyzing));
+    emit(state.copyWith(status: SrtStatus.analyzing, responses: responses));
 
     try {
-      final aiService = await AiEvaluationService.initialize();
-      if (aiService == null) {
-        throw Exception('AI Service failed to initialize.');
+      final raw = await _evaluationPipeline.run(
+        testType: 'SRT',
+        payload: {'responses': responses},
+      );
+      final evalMap = raw['evaluation'];
+      if (evalMap is! Map<String, dynamic>) {
+        throw Exception('Invalid evaluation payload from server');
       }
-
-      final evaluation = await aiService.evaluateSrt(state.responses);
-      final feedbackMarkdown = evaluation.toMarkdown();
+      final evaluation = SrtEvaluationModel.fromJson(evalMap);
+      final feedbackMarkdown =
+          (raw['feedbackMarkdown'] as String?)?.trim().isNotEmpty == true
+              ? raw['feedbackMarkdown'] as String
+              : evaluation.toMarkdown();
 
       emit(state.copyWith(
         status: SrtStatus.completed,
         feedback: feedbackMarkdown,
       ));
-
-      final user = await _authRepository.getCurrentUser();
-      if (user != null) {
-        final result = SrtResultModel(
-          id: '',
-          userId: user.id,
-          responses: state.responses,
-          aiFeedback: feedbackMarkdown,
-          completedAt: DateTime.now(),
-        );
-        await _historyRepository.saveSrtResult(result);
-      }
     } catch (e) {
       emit(state.copyWith(
         status: SrtStatus.error,
         errorMessage: e.toString().replaceAll('Exception: ', ''),
       ));
     }
-  }
-
-  /// Called externally (from UI) when global timer expires
-  Future<void> finishTestFromUI(Emitter<SrtState>? emit) async {
-    // This is handled via NextSituation or via the BlocListener
   }
 
   @override

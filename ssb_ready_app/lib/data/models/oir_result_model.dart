@@ -25,12 +25,15 @@ class OirResultModel {
   }
 
   factory OirResultModel.fromJson(Map<String, dynamic> json, String documentId) {
+    final completedAtRaw = json['completedAt'];
     return OirResultModel(
       id: documentId,
       userId: json['userId'] ?? '',
       score: json['score'] ?? 0,
       totalQuestions: json['totalQuestions'] ?? 0,
-      completedAt: (json['completedAt'] as Timestamp).toDate(),
+      completedAt: completedAtRaw is Timestamp
+          ? completedAtRaw.toDate()
+          : DateTime.tryParse((completedAtRaw ?? '').toString()) ?? DateTime.now(),
     );
   }
 }

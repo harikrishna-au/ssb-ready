@@ -1,9 +1,11 @@
 import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ssb_ready_app/core/services/backend_api_client.dart';
 import 'package:ssb_ready_app/core/errors/auth_failures.dart';
 import 'package:ssb_ready_app/data/models/user_model.dart';
 import 'package:ssb_ready_app/data/datasources/auth_service.dart';
@@ -11,18 +13,22 @@ import 'package:ssb_ready_app/data/datasources/auth_service.dart';
 class FirebaseAuthService implements AuthService {
   final SharedPreferences _prefs;
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  final BackendApiClient _apiClient = BackendApiClient();
 
   static const String _userCacheKey = 'cached_user';
   static const List<String> _googleScopes = <String>['email', 'profile'];
 
-  FirebaseAuthService(this._prefs) {
-    _initializeGoogleSignIn();
-  }
+  /// Lazy so startup does not run Credential Manager / Play Services work while
+  /// the system is still bringing up the UI (reduces emulator "System UI"
+  /// ANRs).
+  Future<void>? _googleSignInInit;
 
-  Future<void> _initializeGoogleSignIn() async {
-    await _googleSignIn.initialize();
+  FirebaseAuthService(this._prefs);
+
+  Future<void> _ensureGoogleSignInReady() async {
+    _googleSignInInit ??= _googleSignIn.initialize();
+    await _googleSignInInit;
   }
 
   @override
@@ -61,14 +67,10 @@ class FirebaseAuthService implements AuthService {
         isPremium: false,
       );
 
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .set(userModel.toJson());
-
       await _cacheUser(userModel);
       final token = await user.getIdToken();
       await _prefs.setString('auth_token', token ?? '');
+      await _persistUserProfile(userModel);
 
       return userModel;
     } on FirebaseAuthException catch (e) {
@@ -131,9 +133,8 @@ class FirebaseAuthService implements AuthService {
   Future<UserModel> signInWithGoogle() async {
     try {
       debugPrint('Attempting Google Sign-In');
-      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate(
-        scopeHint: _googleScopes,
-      );
+      await _ensureGoogleSignInReady();
+      final GoogleSignInAccount googleUser = await _authenticateWithRetry();
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
       final GoogleSignInClientAuthorization googleAuthorization =
           await googleUser.authorizationClient.authorizationForScopes(
@@ -181,24 +182,49 @@ class FirebaseAuthService implements AuthService {
       );
 
       // Save/Merge user in Firestore
-      await _firestore.collection('users').doc(user.uid).set(
-            userModel.toJson(),
-            SetOptions(merge: true),
-          );
-
       await _cacheUser(userModel);
       final token = await user.getIdToken();
       await _prefs.setString('auth_token', token ?? '');
+      await _persistUserProfile(userModel);
 
       return userModel;
     } on FirebaseAuthException catch (e) {
       debugPrint('Firebase Google AuthException: ${e.message}');
       throw AuthFailure.signInFailed(
           message: e.message ?? 'Unknown error occurred.');
+    } on GoogleSignInException catch (e) {
+      debugPrint('GoogleSignInException: $e');
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        throw AuthFailure.googleSignInFailed(
+          message: 'Google sign-in was canceled. Please try again.',
+        );
+      }
+      throw AuthFailure.googleSignInFailed(
+        message: 'Google sign-in failed. Please try again.',
+      );
     } catch (e) {
       debugPrint('Unexpected Google signin error: $e');
       throw AuthFailure.signInFailed(
           message: 'An error occurred: ${e.toString()}');
+    }
+  }
+
+  Future<GoogleSignInAccount> _authenticateWithRetry() async {
+    try {
+      return await _googleSignIn.authenticate(scopeHint: _googleScopes);
+    } on GoogleSignInException catch (e) {
+      final isReauthIssue = e.code == GoogleSignInExceptionCode.canceled &&
+          (e.description ?? '').contains('Account reauth failed');
+      if (!isReauthIssue) rethrow;
+
+      // Credential Manager occasionally keeps a stale session on Android.
+      await _googleSignIn.signOut();
+      try {
+        await _googleSignIn.disconnect();
+      } catch (_) {
+        // Ignore disconnect failures and continue retry flow.
+      }
+      return _googleSignIn.authenticate(scopeHint: _googleScopes);
     }
   }
 
@@ -224,14 +250,10 @@ class FirebaseAuthService implements AuthService {
       final lastName =
           nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
 
-      // We fetch user metadata from Firestore
       String userType = '';
       try {
-        final doc = await _firestore.collection('users').doc(user.uid).get();
-        if (doc.exists && doc.data() != null) {
-          userType = doc.data()!['userType'] ?? '';
-        } else {
-          // Attempt fallback from cache if Firestore fails or doesn't exist
+        userType = await _fetchRemoteUserType(user.uid);
+        if (userType.isEmpty) {
           final cachedJson = _prefs.getString(_userCacheKey);
           if (cachedJson != null) {
             final Map<String, dynamic> userMap = jsonDecode(cachedJson);
@@ -283,10 +305,18 @@ class FirebaseAuthService implements AuthService {
   @override
   Future<void> updateUserType(String userId, String userType) async {
     try {
-      // 1. Update Firestore
-      await _firestore.collection('users').doc(userId).set({
-        'userType': userType,
-      }, SetOptions(merge: true));
+      if (_apiClient.isConfigured) {
+        await _apiClient
+            .patch('/api/firestore/user/type', {'userType': userType});
+      } else {
+        await FirebaseFirestore.instance.collection('users').doc(userId).set(
+              {
+                'userType': userType,
+                'updatedAt': FieldValue.serverTimestamp(),
+              },
+              SetOptions(merge: true),
+            );
+      }
 
       // 2. Update local cache
       final cachedJson = _prefs.getString(_userCacheKey);
@@ -319,6 +349,54 @@ class FirebaseAuthService implements AuthService {
       await _prefs.setString(_userCacheKey, user.toJsonString());
     } catch (e) {
       // Cache failure is not critical
+    }
+  }
+
+  Future<void> _persistUserProfile(UserModel model) async {
+    if (_apiClient.isConfigured) {
+      await _apiClient.post('/api/firestore/user/profile', model.toJson());
+      return;
+    }
+    await FirebaseFirestore.instance.collection('users').doc(model.id).set(
+          {
+            ...model.toJson(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true),
+        );
+  }
+
+  Future<String> _fetchRemoteUserType(String uid) async {
+    if (_apiClient.isConfigured) {
+      final response = await _apiClient.get('/api/firestore/user/profile');
+      final data = response['data'];
+      if (data is Map<String, dynamic>) {
+        final v = data['userType'];
+        return v == null ? '' : '$v'.trim();
+      }
+      return '';
+    }
+    final snap =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final data = snap.data();
+    if (data == null) {
+      return '';
+    }
+    final v = data['userType'];
+    return v == null ? '' : '$v'.trim();
+  }
+
+  /// Call once after [Firebase.initializeApp] to silence null X-Firebase-Locale warnings.
+  static void applyAuthLocaleFromPlatform() {
+    try {
+      final code =
+          WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+      if (code.isEmpty) {
+        return;
+      }
+      FirebaseAuth.instance.setLanguageCode(code);
+    } catch (_) {
+      FirebaseAuth.instance.setLanguageCode('en');
     }
   }
 

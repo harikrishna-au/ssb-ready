@@ -40,10 +40,9 @@ class _SrtScreenState extends State<SrtScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Situation Reaction Test'),
-        backgroundColor: AppColors.primaryGreen,
-        foregroundColor: Colors.white,
       ),
       body: BlocConsumer<SrtBloc, SrtState>(
         listenWhen: (previous, current) {
@@ -63,12 +62,11 @@ class _SrtScreenState extends State<SrtScreen> {
           return false;
         },
         listener: (context, state) {
-          if (state.status == SrtStatus.inProgress && state.globalTimeRemaining == 0) {
-            // Time's up — submit current text and force finish
-            context.read<SrtBloc>().add(SubmitReaction(_controller.text));
+          if (state.status == SrtStatus.inProgress &&
+              state.globalTimeRemaining == 0) {
+            final partial = _controller.text;
             _controller.clear();
-            // Force through remaining situations
-            context.read<SrtBloc>().add(NextSituation());
+            context.read<SrtBloc>().add(FinishSrtOnTimeout(partial));
           } else if (state.status == SrtStatus.analyzing ||
               state.status == SrtStatus.completed ||
               state.status == SrtStatus.error) {
@@ -76,7 +74,8 @@ class _SrtScreenState extends State<SrtScreen> {
           }
         },
         builder: (context, state) {
-          if (state.status == SrtStatus.initial || state.status == SrtStatus.loading) {
+          if (state.status == SrtStatus.initial ||
+              state.status == SrtStatus.loading) {
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -106,15 +105,15 @@ class _SrtScreenState extends State<SrtScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.indigo.withValues(alpha: 0.1),
+            color: AppColors.secondary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
             'Situation ${state.currentSituationIndex + 1} / ${state.situations.length}',
             style: const TextStyle(
               fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.indigo,
+              fontWeight: FontWeight.w700,
+              color: AppColors.secondary,
             ),
           ),
         ),
@@ -122,8 +121,8 @@ class _SrtScreenState extends State<SrtScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
             color: isLowTime
-                ? Colors.red.withValues(alpha: 0.1)
-                : AppColors.primaryGreen.withValues(alpha: 0.1),
+                ? AppColors.error.withValues(alpha: 0.1)
+                : AppColors.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
@@ -131,7 +130,7 @@ class _SrtScreenState extends State<SrtScreen> {
               Icon(
                 Icons.timer,
                 size: 18,
-                color: isLowTime ? Colors.red : AppColors.primaryGreen,
+                color: isLowTime ? AppColors.error : AppColors.primary,
               ),
               const SizedBox(width: 6),
               Text(
@@ -139,7 +138,7 @@ class _SrtScreenState extends State<SrtScreen> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: isLowTime ? Colors.red : AppColors.primaryGreen,
+                  color: isLowTime ? AppColors.error : AppColors.primary,
                 ),
               ),
             ],
@@ -157,13 +156,13 @@ class _SrtScreenState extends State<SrtScreen> {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.indigo.withValues(alpha: 0.2)),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.secondary.withValues(alpha: 0.2)),
           boxShadow: [
             BoxShadow(
-              color: Colors.indigo.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: AppColors.secondary.withValues(alpha: 0.10),
+              blurRadius: 16,
+              offset: const Offset(0, 7),
             ),
           ],
         ),
@@ -173,7 +172,7 @@ class _SrtScreenState extends State<SrtScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.indigo.withValues(alpha: 0.1),
+                color: AppColors.secondary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(
@@ -181,7 +180,7 @@ class _SrtScreenState extends State<SrtScreen> {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: Colors.indigo,
+                  color: AppColors.secondary,
                   letterSpacing: 1.2,
                 ),
               ),
@@ -192,8 +191,8 @@ class _SrtScreenState extends State<SrtScreen> {
                 child: Text(
                   state.currentSituation,
                   style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w600,
                     height: 1.5,
                   ),
                 ),
@@ -222,11 +221,12 @@ class _SrtScreenState extends State<SrtScreen> {
                 hintText: 'Write your reaction...',
                 alignLabelWithHint: true,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide:
+                      const BorderSide(color: AppColors.primary, width: 1.8),
                 ),
               ),
             ),
@@ -238,17 +238,21 @@ class _SrtScreenState extends State<SrtScreen> {
             child: ElevatedButton.icon(
               onPressed: _submitAndNext,
               icon: Icon(
-                state.isLastSituation ? Icons.check_circle : Icons.arrow_forward,
+                state.isLastSituation
+                    ? Icons.check_circle
+                    : Icons.arrow_forward,
               ),
               label: Text(
                 state.isLastSituation ? 'Finish Test' : 'Next Situation',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: state.isLastSituation ? Colors.indigo : AppColors.primaryGreen,
-                foregroundColor: Colors.white,
+                backgroundColor: state.isLastSituation
+                    ? AppColors.secondary
+                    : AppColors.primary,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
             ),

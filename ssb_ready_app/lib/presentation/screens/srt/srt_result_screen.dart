@@ -11,10 +11,9 @@ class SrtResultScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('SRT Assessment'),
-        backgroundColor: Colors.indigo[600],
-        foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -47,7 +46,8 @@ class SrtResultScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.red, size: 60),
+                    const Icon(Icons.error_outline,
+                        color: Colors.red, size: 60),
                     const SizedBox(height: 16),
                     Text(
                       state.errorMessage ?? 'An unknown error occurred.',
@@ -57,7 +57,8 @@ class SrtResultScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: () {
-                        Navigator.of(context).popUntil((route) => route.isFirst);
+                        Navigator.of(context)
+                            .popUntil((route) => route.isFirst);
                       },
                       child: const Text('Return to Dashboard'),
                     ),
@@ -79,8 +80,8 @@ class SrtResultScreen extends StatelessWidget {
                     'AI Assessment',
                     style: TextStyle(
                       fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryGreen,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -88,12 +89,13 @@ class SrtResultScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: AppColors.border),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                          color: AppColors.secondary.withValues(alpha: 0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 7),
                         ),
                       ],
                     ),
@@ -107,16 +109,16 @@ class SrtResultScreen extends StatelessWidget {
                       Navigator.of(context).popUntil((route) => route.isFirst);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryGreen,
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.secondary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
                     child: const Text(
                       'Finish',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -134,9 +136,9 @@ class SrtResultScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.indigo[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.indigo[100]!),
+        color: AppColors.surfaceSoft,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,8 +147,8 @@ class SrtResultScreen extends StatelessWidget {
             'Your Reactions (${responses.length})',
             style: TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.indigo[700],
+              fontWeight: FontWeight.w700,
+              color: AppColors.secondary,
             ),
           ),
           const SizedBox(height: 12),
@@ -172,11 +174,12 @@ class SrtResultScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       color: e.value.isEmpty ? Colors.red[300] : Colors.black87,
-                      fontStyle: e.value.isEmpty ? FontStyle.italic : FontStyle.normal,
+                      fontStyle:
+                          e.value.isEmpty ? FontStyle.italic : FontStyle.normal,
                     ),
                   ),
                   if (index < responses.length - 1)
-                    Divider(color: Colors.indigo[100], height: 20),
+                    const Divider(color: AppColors.border, height: 20),
                 ],
               ),
             );

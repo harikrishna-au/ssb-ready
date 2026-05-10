@@ -28,13 +28,16 @@ class TatResultModel {
   }
 
   factory TatResultModel.fromJson(Map<String, dynamic> json, String documentId) {
+    final completedAtRaw = json['completedAt'];
     return TatResultModel(
       id: documentId,
       userId: json['userId'] ?? '',
       imageIndex: json['imageIndex'] ?? 0,
       userStory: json['userStory'] ?? '',
       aiFeedback: json['aiFeedback'] ?? '',
-      completedAt: (json['completedAt'] as Timestamp).toDate(),
+      completedAt: completedAtRaw is Timestamp
+          ? completedAtRaw.toDate()
+          : DateTime.tryParse((completedAtRaw ?? '').toString()) ?? DateTime.now(),
     );
   }
 }

@@ -30,7 +30,9 @@ class _WatScreenState extends State<WatScreen> {
   }
 
   void _submitSentence() {
-    if (_controller.text.trim().isEmpty) return; // Optional: enforce non-empty? For WAT, empty is a skip.
+    if (_controller.text.trim().isEmpty) {
+      return;
+    } // Optional: enforce non-empty? For WAT, empty is a skip.
     context.read<WatBloc>().add(SubmitSentence(_controller.text));
     _controller.clear();
     _focusNode.requestFocus();
@@ -39,9 +41,9 @@ class _WatScreenState extends State<WatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Word Association Test'),
-        backgroundColor: AppColors.primaryGreen,
       ),
       body: BlocConsumer<WatBloc, WatState>(
         listenWhen: (previous, current) {
@@ -53,28 +55,33 @@ class _WatScreenState extends State<WatScreen> {
             return true;
           }
           // Listen for test completion
-          if (current.status == WatStatus.analyzing || current.status == WatStatus.completed) {
+          if (current.status == WatStatus.analyzing ||
+              current.status == WatStatus.completed) {
             return true;
           }
           return false;
         },
         listener: (context, state) {
-          if (state.status == WatStatus.inProgress && state.timeRemaining == 0) {
+          if (state.status == WatStatus.inProgress &&
+              state.timeRemaining == 0) {
             // Timer expired, auto-submit what they have
             context.read<WatBloc>().add(SubmitSentence(_controller.text));
             _controller.clear();
             _focusNode.requestFocus();
-          } else if (state.status == WatStatus.analyzing || state.status == WatStatus.completed) {
+          } else if (state.status == WatStatus.analyzing ||
+              state.status == WatStatus.completed) {
             Navigator.pushReplacementNamed(context, '/wat-result');
           }
         },
         builder: (context, state) {
-          if (state.status == WatStatus.initial || state.status == WatStatus.loading) {
+          if (state.status == WatStatus.initial ||
+              state.status == WatStatus.loading) {
             return const Center(child: CircularProgressIndicator());
           }
 
           if (state.status == WatStatus.error) {
-            return Center(child: Text(state.errorMessage ?? 'An error occurred.'));
+            return Center(
+                child: Text(state.errorMessage ?? 'An error occurred.'));
           }
 
           return Padding(
@@ -101,19 +108,23 @@ class _WatScreenState extends State<WatScreen> {
       children: [
         Text(
           'Word ${state.currentWordIndex + 1} of ${state.words.length}',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
         ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: state.timeRemaining <= 5 ? Colors.red.withValues(alpha: 0.1) : AppColors.primaryGreen.withValues(alpha: 0.1),
+            color: state.timeRemaining <= 5
+                ? AppColors.error.withValues(alpha: 0.12)
+                : AppColors.primary.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
             children: [
               Icon(
                 Icons.timer,
-                color: state.timeRemaining <= 5 ? Colors.red : AppColors.primaryGreen,
+                color: state.timeRemaining <= 5
+                    ? AppColors.error
+                    : AppColors.primary,
               ),
               const SizedBox(width: 8),
               Text(
@@ -121,7 +132,9 @@ class _WatScreenState extends State<WatScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: state.timeRemaining <= 5 ? Colors.red : AppColors.primaryGreen,
+                  color: state.timeRemaining <= 5
+                      ? AppColors.error
+                      : AppColors.primary,
                 ),
               ),
             ],
@@ -139,12 +152,12 @@ class _WatScreenState extends State<WatScreen> {
           padding: const EdgeInsets.symmetric(vertical: 60),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+                color: AppColors.primary.withValues(alpha: 0.08),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
@@ -152,9 +165,10 @@ class _WatScreenState extends State<WatScreen> {
             state.currentWord.toUpperCase(),
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 48,
+              fontSize: 50,
               fontWeight: FontWeight.w900,
               letterSpacing: 2.0,
+              color: AppColors.textPrimary,
             ),
           ),
         ),
@@ -174,11 +188,12 @@ class _WatScreenState extends State<WatScreen> {
           decoration: InputDecoration(
             hintText: 'Type your sentence here...',
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
+              borderRadius: BorderRadius.circular(16),
+              borderSide:
+                  const BorderSide(color: AppColors.primary, width: 1.8),
             ),
           ),
         ),
@@ -189,9 +204,9 @@ class _WatScreenState extends State<WatScreen> {
           child: ElevatedButton(
             onPressed: _submitSentence,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryGreen,
+              backgroundColor: AppColors.secondary,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
               ),
             ),
             child: const Text(

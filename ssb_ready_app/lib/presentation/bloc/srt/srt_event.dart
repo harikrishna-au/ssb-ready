@@ -20,3 +20,12 @@ class SubmitReaction extends SrtEvent {
 }
 
 class NextSituation extends SrtEvent {}
+
+/// Submit current text, pad unanswered situations with empty strings, run evaluation.
+class FinishSrtOnTimeout extends SrtEvent {
+  final String partialReaction;
+  const FinishSrtOnTimeout(this.partialReaction);
+
+  @override
+  List<Object?> get props => [partialReaction];
+}

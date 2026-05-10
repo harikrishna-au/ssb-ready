@@ -1,9 +1,9 @@
 const { createClient } = require('@supabase/supabase-js');
-const { loadEnv } = require('./env');
+const { config, loadEnv } = require('./index');
 
 loadEnv();
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY, {
+const supabase = createClient(config.supabase.url, config.supabase.key, {
   auth: {
     persistSession: false,
     autoRefreshToken: false

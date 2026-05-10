@@ -1,15 +1,12 @@
 const { createApp } = require('./app');
-const { loadEnv } = require('./config/env');
+const { loadEnv, config } = require('./config');
 const { logger } = require('./utils/logger');
 
 loadEnv();
 const app = createApp();
 
-const PORT = Number(process.env.PORT || 5000);
-const HOST = process.env.HOST || '0.0.0.0';
-
-const server = app.listen(PORT, HOST, () => {
-  logger.info(`SSB backend listening on ${HOST}:${PORT}`);
+const server = app.listen(config.port, config.host, () => {
+  logger.info(`SSB backend listening on ${config.host}:${config.port}`);
 });
 
 const gracefulShutdown = (signal) => {

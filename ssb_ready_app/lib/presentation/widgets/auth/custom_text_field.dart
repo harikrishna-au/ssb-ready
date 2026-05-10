@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ssb_ready_app/core/theme/app_colors.dart';
 
 class CustomTextField extends StatefulWidget {
   final String label;
@@ -38,6 +39,7 @@ class CustomTextField extends StatefulWidget {
 
 class _CustomTextFieldState extends State<CustomTextField> {
   late bool _isObscured;
+  bool _isFocused = false;
 
   @override
   void initState() {
@@ -53,64 +55,56 @@ class _CustomTextFieldState extends State<CustomTextField> {
         Text(
           widget.label,
           style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF212121),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
-          controller: widget.controller,
-          keyboardType: widget.keyboardType,
-          obscureText: _isObscured,
-          textInputAction: widget.textInputAction,
-          focusNode: widget.focusNode,
-          onChanged: widget.onChanged,
-          decoration: InputDecoration(
-            hintText: widget.hint,
-            prefixIcon: widget.prefixIcon,
-            suffixIcon: (widget.obscureText || widget.isPassword)
-                ? GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _isObscured = !_isObscured;
-                      });
-                    },
-                    child: Icon(
-                      _isObscured ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.grey,
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: _isFocused
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      blurRadius: 20,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 6),
                     ),
-                  )
-                : widget.suffixIcon,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(0xFFE0E0E0),
+                  ]
+                : const [],
+          ),
+          child: Focus(
+            onFocusChange: (focused) => setState(() => _isFocused = focused),
+            child: TextField(
+              controller: widget.controller,
+              keyboardType: widget.keyboardType,
+              obscureText: _isObscured,
+              textInputAction: widget.textInputAction,
+              focusNode: widget.focusNode,
+              onChanged: widget.onChanged,
+              onEditingComplete: widget.onEditingComplete,
+              decoration: InputDecoration(
+                hintText: widget.hint,
+                prefixIcon: widget.prefixIcon,
+                suffixIcon: (widget.obscureText || widget.isPassword)
+                    ? GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isObscured = !_isObscured;
+                          });
+                        },
+                        child: Icon(
+                          _isObscured ? Icons.visibility_off : Icons.visibility,
+                          color: AppColors.textSecondary,
+                        ),
+                      )
+                    : widget.suffixIcon,
+                errorText: widget.errorText,
               ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(0xFFE0E0E0),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(0xFF2E7D32),
-                width: 2,
-              ),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(0xFFF44336),
-              ),
-            ),
-            errorText: widget.errorText,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
             ),
           ),
         ),
