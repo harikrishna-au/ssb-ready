@@ -117,6 +117,7 @@ class FirebaseAuthService implements AuthService {
       await _cacheUser(userModel);
       final token = await user.getIdToken();
       await _prefs.setString('auth_token', token ?? '');
+      await _persistUserProfile(userModel);
 
       return userModel;
     } on FirebaseAuthException catch (e) {
@@ -354,8 +355,16 @@ class FirebaseAuthService implements AuthService {
 
   Future<void> _persistUserProfile(UserModel model) async {
     if (_apiClient.isConfigured) {
-      await _apiClient.post('/api/firestore/user/profile', model.toJson());
-      return;
+      try {
+        await _apiClient.post('/api/firestore/user/profile', model.toJson());
+        return;
+      } catch (e, stack) {
+        // Render / Admin: missing FIREBASE_SERVICE_ACCOUNT_JSON surfaces as
+        // "Could not load the default credentials". Fall back to Firestore
+        // (rules allow authenticated user to write own `users/{uid}`).
+        debugPrint('Backend user profile sync failed, using Firestore: $e');
+        debugPrint('$stack');
+      }
     }
     await FirebaseFirestore.instance.collection('users').doc(model.id).set(
           {

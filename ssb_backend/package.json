@@ -7,7 +7,11 @@
   "scripts": {
     "start": "node server.js",
     "dev": "NODE_ENV=development node server.js",
-    "check": "node -e \"require('./config').loadEnv(); require('./app').createApp(); console.log('App bootstrap check passed')\""
+    "check": "node -e \"require('./config').loadEnv(); require('./app').createApp(); console.log('App bootstrap check passed')\"",
+    "oir:extract-pdf": "python3 scripts/extract_pdf_pages.py",
+    "oir:import-images": "node scripts/import_oir_images.js",
+    "oir:purge": "node scripts/purge_oir_questions.js",
+    "oir:purge-images": "node scripts/purge_oir_questions.js --only-with-image"
   },
   "engines": {
     "node": ">=18"

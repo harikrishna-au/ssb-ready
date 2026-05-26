@@ -34,12 +34,14 @@ class InterviewState extends Equatable {
   final InterviewStatus status;
   final PiqModel? piq;
   final List<Map<String, String>> chatHistory;
+  final List<Map<String, String>> questionBank;
   final String? errorMessage;
 
   const InterviewState({
     this.status = InterviewStatus.initial,
     this.piq,
     this.chatHistory = const [],
+    this.questionBank = const [],
     this.errorMessage,
   });
 
@@ -47,16 +49,18 @@ class InterviewState extends Equatable {
     InterviewStatus? status,
     PiqModel? piq,
     List<Map<String, String>>? chatHistory,
+    List<Map<String, String>>? questionBank,
     String? errorMessage,
   }) {
     return InterviewState(
       status: status ?? this.status,
       piq: piq ?? this.piq,
       chatHistory: chatHistory ?? this.chatHistory,
+      questionBank: questionBank ?? this.questionBank,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
 
   @override
-  List<Object?> get props => [status, piq, chatHistory, errorMessage];
+  List<Object?> get props => [status, piq, chatHistory, questionBank, errorMessage];
 }

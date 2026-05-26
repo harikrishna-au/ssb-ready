@@ -17,6 +17,9 @@ services:
       - key: HOST
         value: 0.0.0.0
       # Set in dashboard after first deploy: https://<service>.onrender.com (no trailing slash).
+      # Privacy policy for Play Console: https://<service>.onrender.com/privacy
       - key: PUBLIC_URL
         sync: false
+      - key: SUPPORT_EMAIL
+        value: support@ssbready.app
       # Render injects PORT automatically; do not set PORT here.

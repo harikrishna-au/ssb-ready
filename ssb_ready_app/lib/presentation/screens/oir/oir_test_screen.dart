@@ -138,77 +138,109 @@ class OirTestScreen extends StatelessWidget {
             valueColor:
                 const AlwaysStoppedAnimation<Color>(AppColors.secondary),
           ),
-          const SizedBox(height: 32),
-          Text(
-            'Question ${state.currentQuestionIndex + 1} of ${state.questions.length}',
-            style: const TextStyle(
-                fontWeight: FontWeight.w700, color: AppColors.secondary),
-          ),
           const SizedBox(height: 16),
-          Text(
-            question.text,
-            style: const TextStyle(
-                fontSize: 21, fontWeight: FontWeight.w600, height: 1.35),
-          ),
-          const SizedBox(height: 32),
-          ...question.options.asMap().entries.map((entry) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: Material(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                shadowColor: AppColors.primary.withValues(alpha: 0.12),
-                elevation: 0.6,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(18),
-                  onTap: () =>
-                      context.read<OirBloc>().add(SubmitAnswer(entry.key)),
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppColors.border),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 14,
-                          backgroundColor:
-                              AppColors.secondary.withValues(alpha: 0.12),
-                          child: Text(
-                            String.fromCharCode(65 + entry.key),
-                            style: const TextStyle(
-                                fontSize: 12, color: AppColors.secondary),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Text(
-                            entry.value,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w500,
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Question ${state.currentQuestionIndex + 1} of ${state.questions.length}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, color: AppColors.secondary),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    question.text,
+                    style: const TextStyle(
+                        fontSize: 21, fontWeight: FontWeight.w600, height: 1.35),
+                  ),
+                  if (question.imageUrl != null && question.imageUrl!.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        width: double.infinity,
+                        constraints: const BoxConstraints(maxHeight: 320),
+                        color: Colors.white,
+                        child: Image.network(
+                          question.imageUrl!,
+                          fit: BoxFit.contain,
+                          width: double.infinity,
+                          errorBuilder: (_, __, ___) => const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text(
+                              'Unable to load question image.',
+                              style: TextStyle(color: AppColors.textSecondary),
                             ),
                           ),
                         ),
-                      ],
+                      ),
                     ),
+                  ],
+                  const SizedBox(height: 24),
+                  ...question.options.asMap().entries.map((entry) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: Material(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        shadowColor: AppColors.primary.withValues(alpha: 0.12),
+                        elevation: 0.6,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: () =>
+                              context.read<OirBloc>().add(SubmitAnswer(entry.key)),
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: AppColors.border),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 14,
+                                  backgroundColor:
+                                      AppColors.secondary.withValues(alpha: 0.12),
+                                  child: Text(
+                                    String.fromCharCode(65 + entry.key),
+                                    style: const TextStyle(
+                                        fontSize: 12, color: AppColors.secondary),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Text(
+                                    entry.value,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton(
+                        onPressed: () => context.read<OirBloc>().add(SkipQuestion()),
+                        child: const Text('SKIP',
+                            style: TextStyle(color: AppColors.textSecondary)),
+                      ),
+                    ],
                   ),
-                ),
+                ],
               ),
-            );
-          }),
-          const Spacer(),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              TextButton(
-                onPressed: () => context.read<OirBloc>().add(SkipQuestion()),
-                child: const Text('SKIP',
-                    style: TextStyle(color: AppColors.textSecondary)),
-              ),
-            ],
+            ),
           ),
         ],
       ),

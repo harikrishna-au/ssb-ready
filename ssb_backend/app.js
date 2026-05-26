@@ -13,6 +13,7 @@ const firestoreRoutes = require('./routes/firestoreRoutes');
 const ppdtRoutes = require('./routes/ppdtRoutes');
 const tatRoutes = require('./routes/tatRoutes');
 const evaluationPipelineRoutes = require('./routes/evaluationPipelineRoutes');
+const legalRoutes = require('./routes/legalRoutes');
 
 function createApp() {
   const app = express();
@@ -27,10 +28,19 @@ function createApp() {
   app.use(express.urlencoded({ extended: true }));
   app.use(requestContext);
 
-  app.get('/', (_req, res) => {
+  app.get('/', (req, res) => {
+    const proto = req.get('x-forwarded-proto') || req.protocol;
+    const host = req.get('x-forwarded-host') || req.get('host') || '';
+    const base =
+      config.publicUrl ||
+      (host ? `${proto}://${host}`.replace(/\/+$/, '') : '');
+
     const payload = {
       service: 'ssb-backend',
-      status: 'ok'
+      status: 'ok',
+      legal: {
+        privacyPolicy: base ? `${base}/privacy` : '/privacy'
+      }
     };
     if (config.publicUrl) {
       payload.publicUrl = config.publicUrl;
@@ -38,6 +48,7 @@ function createApp() {
     res.json(payload);
   });
 
+  app.use('/', legalRoutes);
   app.use('/api/health', healthRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/evaluate', evaluationRoutes);

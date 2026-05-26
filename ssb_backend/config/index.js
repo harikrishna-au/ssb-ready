@@ -54,6 +54,11 @@ const config = Object.freeze({
   openai: Object.freeze({
     apiKey: process.env.OPENAI_API_KEY,
     model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    /** Mock IO chat + INTERVIEW_PREP question bank; defaults to OPENAI_MODEL. */
+    interviewModel:
+      process.env.OPENAI_INTERVIEW_MODEL ||
+      process.env.OPENAI_MODEL ||
+      'gpt-4o-mini',
     visionModel:
       process.env.OPENAI_VISION_MODEL ||
       process.env.OPENAI_MODEL ||

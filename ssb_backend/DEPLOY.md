@@ -21,7 +21,9 @@ All settings are read via **`config/index.js`** (single source of truth). Set at
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | Full service account JSON (e.g. Render secret); alternative to file-based credentials |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account JSON **or** use default credentials on GCP |
 
-For Firebase Admin in production, prefer **`FIREBASE_SERVICE_ACCOUNT_JSON`** on hosts without a filesystem secret file, or a mounted key file with `GOOGLE_APPLICATION_CREDENTIALS`.
+For Firebase Admin in production, **`FIREBASE_SERVICE_ACCOUNT_JSON` is required** on Render and similar hosts: without it, `firebase-admin` has no credentials and Firestore calls fail with *“Could not load the default credentials”* (often seen in the mobile app after login). Download a service account key from Firebase Console → Project settings → Service accounts → Generate new private key, minify JSON to one line, and set as a **Secret** env var on Render.
+
+Alternatively use a mounted JSON file and `GOOGLE_APPLICATION_CREDENTIALS`.
 
 ## Docker
 
@@ -70,3 +72,23 @@ Point the Flutter app `BACKEND_URL` to your HTTPS API base (no trailing slash), 
 
 5. **Docker on Render**  
    Optional: create a **Web Service** with **Docker**, context `ssb_backend`, use the existing [`Dockerfile`](./Dockerfile). Pass the same env vars; map secrets via Render’s **Secret Files** if you prefer a key file over JSON-in-env.
+
+## Privacy policy URL (Play Console / stores)
+
+After deploy, set **`PUBLIC_URL`** to your Render HTTPS base (no trailing slash), e.g. `https://ssb-ready.onrender.com`.
+
+Use this in **Google Play Console → App content → Privacy policy**:
+
+```text
+https://YOUR-SERVICE.onrender.com/privacy
+```
+
+Example (replace with your service name):
+
+```text
+https://ssb-ready.onrender.com/privacy
+```
+
+The page is public HTML (no login). Optional env **`SUPPORT_EMAIL`** sets the contact address on that page.
+
+Verify: open the URL in a browser, or `curl -I https://YOUR-SERVICE.onrender.com/privacy` (expect `200` and `Content-Type: text/html`).

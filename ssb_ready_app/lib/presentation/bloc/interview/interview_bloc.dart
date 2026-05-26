@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:ssb_ready_app/core/services/backend_api_client.dart';
 import 'package:ssb_ready_app/core/services/evaluation_pipeline_service.dart';
 import 'package:ssb_ready_app/domain/repositories/auth_repository.dart';
 import 'package:ssb_ready_app/domain/repositories/test_history_repository.dart';
@@ -9,13 +10,16 @@ class InterviewBloc extends Bloc<InterviewEvent, InterviewState> {
   final AuthRepository _authRepository;
   final TestHistoryRepository _historyRepository;
   final EvaluationPipelineService _evaluationPipeline;
+  final BackendApiClient _apiClient;
 
   InterviewBloc(
     this._authRepository,
     this._historyRepository, {
     EvaluationPipelineService? evaluationPipeline,
+    BackendApiClient? apiClient,
   })  : _evaluationPipeline =
             evaluationPipeline ?? EvaluationPipelineService(),
+        _apiClient = apiClient ?? BackendApiClient(),
         super(const InterviewState()) {
     on<LoadPiq>(_onLoadPiq);
     on<UpdatePiqField>(_onUpdatePiqField);
@@ -31,9 +35,11 @@ class InterviewBloc extends Bloc<InterviewEvent, InterviewState> {
       if (user == null) throw Exception('User not authenticated');
       
       final piq = await _historyRepository.getPiq(user.id);
+      final bank = await _fetchQuestionBank();
       emit(state.copyWith(
         status: InterviewStatus.loaded,
         piq: piq ?? PiqModel(userId: user.id, fullName: '${user.firstName ?? ''} ${user.lastName ?? ''}'.trim()),
+        questionBank: bank,
       ));
     } catch (e) {
       emit(state.copyWith(status: InterviewStatus.error, errorMessage: e.toString()));
@@ -95,6 +101,25 @@ class InterviewBloc extends Bloc<InterviewEvent, InterviewState> {
       emit(state.copyWith(chatHistory: updatedHistory, status: InterviewStatus.interviewing));
     } catch (e) {
       emit(state.copyWith(status: InterviewStatus.error, errorMessage: 'Failed to get AI response.'));
+    }
+  }
+
+  Future<List<Map<String, String>>> _fetchQuestionBank() async {
+    if (!_apiClient.isConfigured) return const [];
+    try {
+      final response = await _apiClient.get('/api/interview/bank?onlineOnly=true&limit=50');
+      final raw = response['questionBank'];
+      if (raw is! List) return const [];
+      return raw
+          .whereType<Map<String, dynamic>>()
+          .map((q) => {
+                'section': (q['section'] ?? '').toString(),
+                'question': (q['question'] ?? '').toString(),
+              })
+          .where((q) => (q['question'] ?? '').trim().isNotEmpty)
+          .toList();
+    } catch (_) {
+      return const [];
     }
   }
 }
