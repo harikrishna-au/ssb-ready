@@ -30,7 +30,9 @@ class DashboardScreen extends StatelessWidget {
           builder: (context, state) {
             String userName = 'Aspirant';
             if (state is AuthAuthenticated) {
-              userName = state.user.firstName ?? 'Aspirant';
+              // Prefer full name (first + last) for a cleaner dashboard greeting.
+              final fullName = state.user.fullName;
+              userName = fullName.isNotEmpty ? fullName : (state.user.firstName ?? 'Aspirant');
             }
 
             return CustomScrollView(
@@ -75,6 +77,13 @@ class DashboardScreen extends StatelessWidget {
                         icon: Icons.forum_outlined,
                         color: const Color(0xFF6A5CE6),
                         onTap: () => Navigator.pushNamed(context, '/interview'),
+                      ),
+                      FeatureCard(
+                        title: 'Premium Access',
+                        description: 'Lifetime plan for ₹299.',
+                        icon: Icons.workspace_premium_outlined,
+                        color: const Color(0xFF0F766E),
+                        onTap: () => Navigator.pushNamed(context, '/premium'),
                       ),
                     ]),
                   ),

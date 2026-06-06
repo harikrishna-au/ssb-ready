@@ -33,73 +33,113 @@ class _PpdtScreenState extends State<PpdtScreen> {
   final TextEditingController _storyController = TextEditingController();
   final TextEditingController _ocrController = TextEditingController();
   final TextEditingController _summaryController = TextEditingController();
-  final TextEditingController _sketchNotesController = TextEditingController();
-  final TextEditingController _positiveController =
-      TextEditingController(text: '1');
-  final TextEditingController _negativeController =
-      TextEditingController(text: '0');
-  final TextEditingController _neutralController =
-      TextEditingController(text: '0');
   final List<Offset?> _drawPoints = [];
   final ImagePicker _imagePicker = ImagePicker();
   XFile? _writtenPaperImage;
   bool _ocrBusy = false;
   final BackendApiClient _backendApi = BackendApiClient();
+
   /// Set only in debug builds after an OCR image is prepared (compression stats).
   String? _ocrUploadDebugLine;
   int _animationSeed = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<PpdtBloc>().add(BeginPpdtFlow());
+      }
+    });
+  }
 
   @override
   void dispose() {
     _storyController.dispose();
     _ocrController.dispose();
     _summaryController.dispose();
-    _sketchNotesController.dispose();
-    _positiveController.dispose();
-    _negativeController.dispose();
-    _neutralController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('PPDT Practice'),
-      ),
-      body: BlocConsumer<PpdtBloc, PpdtState>(
-        listener: (context, state) {
-          if (state.phase == PpdtPhase.writing &&
-              state.writingTimeRemaining == 0) {
-            context.read<PpdtBloc>().add(SubmitStory(_storyController.text));
-          } else if (state.phase == PpdtPhase.completed) {
-            Navigator.pushReplacementNamed(context, '/ppdt-result');
-          }
-        },
-        builder: (context, state) {
-          if (state.phase == PpdtPhase.initial) {
-            return _buildInitialView(context);
-          } else if (state.phase == PpdtPhase.waitingPictureConsent) {
-            return _buildPictureConsentView(context);
-          } else if (state.phase == PpdtPhase.modeSelection) {
-            return _buildModeSelectionView(context);
-          } else if (state.phase == PpdtPhase.prep) {
-            return _buildPrepView(state);
-          } else if (state.phase == PpdtPhase.observing) {
-            return _buildObservingView(context, state);
-          } else if (state.phase == PpdtPhase.perceptionCapture) {
-            return _buildPerceptionView(context);
-          } else if (state.phase == PpdtPhase.writing) {
-            return _buildWritingView(context, state);
-          }
-          return const Center(child: CircularProgressIndicator());
-        },
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop || !context.mounted) return;
+        await _confirmExit();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text('PPDT Practice'),
+          leading: IconButton(
+            tooltip: 'Exit PPDT',
+            icon: const Icon(Icons.close),
+            onPressed: _confirmExit,
+          ),
+        ),
+        body: BlocConsumer<PpdtBloc, PpdtState>(
+          listener: (context, state) {
+            if (state.phase == PpdtPhase.writing &&
+                state.writingTimeRemaining == 0) {
+              context.read<PpdtBloc>().add(SubmitStory(_storyController.text));
+            } else if (state.phase == PpdtPhase.completed) {
+              Navigator.pushReplacementNamed(context, '/ppdt-result');
+            }
+          },
+          builder: (context, state) {
+            if (state.phase == PpdtPhase.initial) {
+              return _buildInitialView(context);
+            } else if (state.phase == PpdtPhase.waitingPictureConsent) {
+              return _buildPictureConsentView(context);
+            } else if (state.phase == PpdtPhase.modeSelection) {
+              return _buildModeSelectionView(context);
+            } else if (state.phase == PpdtPhase.prep) {
+              return _buildPrepView(state);
+            } else if (state.phase == PpdtPhase.observing) {
+              return _buildObservingView(context, state);
+            } else if (state.phase == PpdtPhase.perceptionCapture) {
+              return _buildPerceptionView(context, state);
+            } else if (state.phase == PpdtPhase.writing) {
+              return _buildWritingView(context, state);
+            }
+            return const Center(child: CircularProgressIndicator());
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildPerceptionView(BuildContext context) {
+  Future<bool> _confirmExit() async {
+    if (!mounted) return false;
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Exit PPDT?'),
+        content: const Text(
+            'Are you sure you want to exit this practice screen? Your current progress will be lost.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Stay'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldExit == true && mounted) {
+      Navigator.pop(context);
+      return true;
+    }
+    return false;
+  }
+
+  Widget _buildPerceptionView(BuildContext context, PpdtState state) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -111,6 +151,11 @@ class _PpdtScreenState extends State<PpdtScreen> {
           ),
           const SizedBox(height: 10),
           const Text('Add what you observed before writing your story.'),
+          const SizedBox(height: 4),
+          Text(
+            'Time remaining: 00:${state.perceptionTimeRemaining.toString().padLeft(2, '0')}',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 14),
           TextField(
             controller: _summaryController,
@@ -121,47 +166,8 @@ class _PpdtScreenState extends State<PpdtScreen> {
             maxLines: 2,
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _positiveController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Positive',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _negativeController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Negative',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _neutralController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Neutral',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Quick sketch pad (45s approximation)',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
+          const Text('Quick sketch pad',
+              style: TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           Container(
             height: 220,
@@ -186,29 +192,17 @@ class _PpdtScreenState extends State<PpdtScreen> {
             onPressed: () => setState(() => _drawPoints.clear()),
             child: const Text('Clear Sketch'),
           ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _sketchNotesController,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: 'Sketch notes (or drawing interpretation)',
-              border: OutlineInputBorder(),
-            ),
-          ),
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
               context.read<PpdtBloc>().add(
                     SubmitPerceptionMeta(
                       situationSummary: _summaryController.text.trim(),
-                      positiveCharacters:
-                          int.tryParse(_positiveController.text.trim()) ?? 0,
-                      negativeCharacters:
-                          int.tryParse(_negativeController.text.trim()) ?? 0,
-                      neutralCharacters:
-                          int.tryParse(_neutralController.text.trim()) ?? 0,
+                      positiveCharacters: 0,
+                      negativeCharacters: 0,
+                      neutralCharacters: 0,
                       sketchNotes:
-                          '${_sketchNotesController.text.trim()}\n[Sketch strokes: ${_drawPoints.where((p) => p != null).length}]',
+                          '[Sketch strokes: ${_drawPoints.where((p) => p != null).length}]',
                     ),
                   );
             },
@@ -275,7 +269,8 @@ class _PpdtScreenState extends State<PpdtScreen> {
                         const SizedBox(height: 6),
                         const Text(
                           'Take a clear photo or pick from gallery — text is extracted automatically.',
-                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          style: TextStyle(
+                              fontSize: 12, color: AppColors.textSecondary),
                         ),
                         const SizedBox(height: 10),
                         Wrap(
@@ -292,14 +287,16 @@ class _PpdtScreenState extends State<PpdtScreen> {
                             OutlinedButton.icon(
                               onPressed: _ocrBusy
                                   ? null
-                                  : () => _pickWrittenPaper(ImageSource.gallery),
+                                  : () =>
+                                      _pickWrittenPaper(ImageSource.gallery),
                               icon: const Icon(Icons.photo_library_outlined),
                               label: const Text('Upload'),
                             ),
                             if (_writtenPaperImage != null && !_ocrBusy)
                               TextButton.icon(
                                 onPressed: _extractTextFromWrittenPaper,
-                                icon: const Icon(Icons.document_scanner_outlined),
+                                icon:
+                                    const Icon(Icons.document_scanner_outlined),
                                 label: const Text('Extract again'),
                               ),
                           ],
@@ -311,7 +308,8 @@ class _PpdtScreenState extends State<PpdtScreen> {
                               SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               ),
                               SizedBox(width: 10),
                               Expanded(
@@ -340,7 +338,8 @@ class _PpdtScreenState extends State<PpdtScreen> {
                             style: TextStyle(
                               fontSize: 11,
                               height: 1.3,
-                              color: AppColors.textSecondary.withValues(alpha: 0.85),
+                              color: AppColors.textSecondary
+                                  .withValues(alpha: 0.85),
                               fontFamily: 'monospace',
                             ),
                           ),
@@ -405,11 +404,14 @@ class _PpdtScreenState extends State<PpdtScreen> {
       ),
     );
   }
-}
 
-extension on _PpdtScreenState {
+  void _restartIntroAnimation() {
+    setState(() => _animationSeed++);
+  }
+
   Future<void> _pickWrittenPaper(ImageSource source) async {
-    final selected = await _imagePicker.pickImage(source: source, imageQuality: 82);
+    final selected =
+        await _imagePicker.pickImage(source: source, imageQuality: 82);
     if (!mounted || selected == null) return;
     setState(() {
       _writtenPaperImage = selected;
@@ -429,7 +431,8 @@ extension on _PpdtScreenState {
       if (kDebugMode && mounted) {
         final orig = raw.length;
         final prep = payload.bytes.length;
-        final savedPct = orig > 0 ? ((1 - prep / orig) * 100).clamp(0, 100).round() : 0;
+        final savedPct =
+            orig > 0 ? ((1 - prep / orig) * 100).clamp(0, 100).round() : 0;
         setState(() {
           _ocrUploadDebugLine =
               'OCR upload (debug): ${_formatBytesForDebug(orig)} → ${_formatBytesForDebug(prep)} (−$savedPct%)';
@@ -444,13 +447,16 @@ extension on _PpdtScreenState {
       if (!mounted) return;
       if (text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not read text from image. Try a clearer photo.')),
+          const SnackBar(
+              content:
+                  Text('Could not read text from image. Try a clearer photo.')),
         );
         return;
       }
       _ocrController.text = text;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Story text extracted. Review and edit if needed.')),
+        const SnackBar(
+            content: Text('Story text extracted. Review and edit if needed.')),
       );
     } catch (e) {
       if (!mounted) return;

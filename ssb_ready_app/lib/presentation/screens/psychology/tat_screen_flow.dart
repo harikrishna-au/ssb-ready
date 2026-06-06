@@ -3,9 +3,9 @@ part of 'package:ssb_ready_app/presentation/screens/psychology/tat_screen.dart';
 extension _TatScreenFlow on _TatScreenState {
   Widget _buildInitialView(BuildContext context, TatState state) {
     const lines = [
-      'Each card shows a scene description for 30 seconds (practice uses text instead of a slide).',
+      'Each card shows an approved image for 30 seconds.',
       'Then you capture quick perceptions before writing your story.',
-      'You have 3 minutes to write — hero, feelings, and outcome matter.',
+      'You have 4 minutes to write — hero, feelings, and outcome matter.',
     ];
     return Center(
       child: Padding(
@@ -30,7 +30,7 @@ extension _TatScreenFlow on _TatScreenState {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () {
-                setState(() => _animationSeed++);
+                _restartIntroAnimation();
                 context.read<TatBloc>().add(BeginTatFlow());
               },
               child: const Text('BEGIN THIS CARD'),
@@ -43,7 +43,7 @@ extension _TatScreenFlow on _TatScreenState {
 
   Widget _buildConsentView(BuildContext context) {
     const lines = [
-      'Ready to view the scene for 30 seconds?',
+      'Ready to view the card image for 30 seconds?',
       'Focus on characters, tension, and relationships.',
       'The scene disappears when the timer ends.',
     ];
@@ -59,7 +59,8 @@ extension _TatScreenFlow on _TatScreenState {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () => context.read<TatBloc>().add(AcceptPictureViewing()),
+            onPressed: () =>
+                context.read<TatBloc>().add(AcceptPictureViewing()),
             child: const Text('YES, SHOW SCENE'),
           ),
         ],
@@ -86,7 +87,8 @@ extension _TatScreenFlow on _TatScreenState {
           const SizedBox(height: 20),
           ListTile(
             tileColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             title: const Text('Type in app'),
             onTap: () => context
                 .read<TatBloc>()
@@ -95,7 +97,8 @@ extension _TatScreenFlow on _TatScreenState {
           const SizedBox(height: 12),
           ListTile(
             tileColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             title: const Text('Write on paper'),
             onTap: () => context
                 .read<TatBloc>()
@@ -122,6 +125,11 @@ extension _TatScreenFlow on _TatScreenState {
             state.storyInputMode == StoryInputMode.paper
                 ? 'Prepare paper and pen'
                 : 'Prepare to type',
+          ),
+          const SizedBox(height: 20),
+          OutlinedButton(
+            onPressed: () => context.read<TatBloc>().add(SkipPrep()),
+            child: const Text('SKIP PREP'),
           ),
         ],
       ),
@@ -158,14 +166,20 @@ extension _TatScreenFlow on _TatScreenState {
               borderRadius: BorderRadius.circular(20),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(24),
                 color: Colors.white,
-                child: SingleChildScrollView(
-                  child: Text(
-                    state.currentImageDescription,
-                    style: const TextStyle(fontSize: 17, height: 1.55),
-                    textAlign: TextAlign.center,
-                  ),
+                child: Image.network(
+                  state.currentImageUrl,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return const Center(child: CircularProgressIndicator());
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Center(
+                      child: Text('Image unavailable',
+                          textAlign: TextAlign.center),
+                    );
+                  },
                 ),
               ),
             ),

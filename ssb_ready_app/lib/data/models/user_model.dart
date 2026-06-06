@@ -3,7 +3,6 @@ import 'package:ssb_ready_app/domain/entities/user.dart';
 
 class UserModel extends User {
   final DateTime? updatedAt;
-  final bool? isPremium;
 
   const UserModel({
     required super.id,
@@ -15,7 +14,7 @@ class UserModel extends User {
     super.createdAt,
     super.userType,
     this.updatedAt,
-    this.isPremium,
+    super.isPremium,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -26,12 +25,10 @@ class UserModel extends User {
       lastName: json['lastName'],
       profileImageUrl: json['profileImageUrl'],
       emailVerified: json['emailVerified'] ?? false,
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : null,
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
-          : null,
+      createdAt:
+          json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
+      updatedAt:
+          json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
       userType: json['userType'],
       isPremium: json['isPremium'] ?? false,
     );
@@ -47,6 +44,7 @@ class UserModel extends User {
       emailVerified: user.emailVerified,
       createdAt: user.createdAt,
       userType: user.userType,
+      isPremium: user.isPremium,
     );
   }
 
@@ -60,6 +58,7 @@ class UserModel extends User {
       'emailVerified': emailVerified,
       'createdAt': createdAt?.toIso8601String(),
       'userType': userType,
+      'isPremium': isPremium ?? false,
     };
   }
 
@@ -76,6 +75,7 @@ class UserModel extends User {
     bool? emailVerified,
     DateTime? createdAt,
     String? userType,
+    bool? isPremium,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -86,6 +86,7 @@ class UserModel extends User {
       emailVerified: emailVerified ?? this.emailVerified,
       createdAt: createdAt ?? this.createdAt,
       userType: userType ?? this.userType,
+      isPremium: isPremium ?? this.isPremium,
     );
   }
 }

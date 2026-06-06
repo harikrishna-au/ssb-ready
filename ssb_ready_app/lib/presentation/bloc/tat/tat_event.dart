@@ -23,9 +23,13 @@ class SelectStoryMode extends TatEvent {
 
 class TickPrepTimer extends TatEvent {}
 
+class SkipPrep extends TatEvent {}
+
 class StartObservation extends TatEvent {}
 
 class TickObservationTimer extends TatEvent {}
+
+class TickPerceptionTimer extends TatEvent {}
 
 class SubmitPerceptionMeta extends TatEvent {
   final String situationSummary;

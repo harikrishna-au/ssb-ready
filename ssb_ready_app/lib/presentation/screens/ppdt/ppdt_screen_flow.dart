@@ -5,7 +5,7 @@ extension _PpdtScreenFlow on _PpdtScreenState {
     const introLines = [
       'You will be shown a hazy picture for exactly 30 seconds.',
       'After 30 seconds, the picture will disappear.',
-      'You will then have 3 minutes to write a meaningful story.',
+      'You will then have 4 minutes to write a meaningful story.',
       'Focus on what led to the situation, what is happening now, and the final outcome.',
     ];
 
@@ -38,7 +38,7 @@ extension _PpdtScreenFlow on _PpdtScreenState {
             const SizedBox(height: 40),
             ElevatedButton(
               onPressed: () {
-                setState(() => _animationSeed++);
+                _restartIntroAnimation();
                 context.read<PpdtBloc>().add(BeginPpdtFlow());
               },
               style: ElevatedButton.styleFrom(
@@ -69,11 +69,13 @@ extension _PpdtScreenFlow on _PpdtScreenState {
           AnimatedInstructionList(
             key: ValueKey('consent-$_animationSeed'),
             lines: consentLines,
-            titleStyle: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
+            titleStyle:
+                const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () => context.read<PpdtBloc>().add(AcceptPictureViewing()),
+            onPressed: () =>
+                context.read<PpdtBloc>().add(AcceptPictureViewing()),
             child: const Text('YES, SHOW PICTURE'),
           ),
         ],
@@ -96,12 +98,14 @@ extension _PpdtScreenFlow on _PpdtScreenState {
           AnimatedInstructionList(
             key: ValueKey('mode-$_animationSeed'),
             lines: modeLines,
-            titleStyle: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
+            titleStyle:
+                const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 20),
           ListTile(
             tileColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             title: const Text('Type in app'),
             subtitle: const Text('You will type your story directly.'),
             onTap: () => context
@@ -111,9 +115,11 @@ extension _PpdtScreenFlow on _PpdtScreenState {
           const SizedBox(height: 12),
           ListTile(
             tileColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             title: const Text('Write on paper'),
-            subtitle: const Text('Prepare paper and pen, then paste OCR text later.'),
+            subtitle:
+                const Text('Prepare paper and pen, then paste OCR text later.'),
             onTap: () => context
                 .read<PpdtBloc>()
                 .add(const SelectStoryMode(StoryInputMode.paper)),
@@ -139,6 +145,11 @@ extension _PpdtScreenFlow on _PpdtScreenState {
             state.storyInputMode == StoryInputMode.paper
                 ? 'Arrange paper and pen'
                 : 'Get ready to type your story',
+          ),
+          const SizedBox(height: 20),
+          OutlinedButton(
+            onPressed: () => context.read<PpdtBloc>().add(SkipPrep()),
+            child: const Text('SKIP PREP'),
           ),
         ],
       ),

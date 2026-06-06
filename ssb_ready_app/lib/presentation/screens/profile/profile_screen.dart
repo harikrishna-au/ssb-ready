@@ -36,6 +36,10 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 _buildProfileCard(user),
                 const SizedBox(height: 24),
+                if (user.isPremium != true) ...[
+                  _buildPremiumUpsell(context),
+                  const SizedBox(height: 24),
+                ],
                 const Text(
                   'Performance Analytics',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
@@ -125,8 +129,68 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(height: 10),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: user.isPremium == true
+                        ? Colors.amber.withValues(alpha: 0.22)
+                        : Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    user.isPremium == true ? 'Lifetime Premium' : 'Free Plan',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumUpsell(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F766E), Color(0xFF115E59)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Unlock Lifetime Premium',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Get full access to all PPDT and TAT images, premium practice sets, and your lifetime plan for only ₹299.',
+            style: TextStyle(color: Colors.white70, height: 1.4),
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton(
+            onPressed: () => Navigator.pushNamed(context, '/premium'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: Colors.white70),
+            ),
+            child: const Text('View Premium Offer'),
           ),
         ],
       ),

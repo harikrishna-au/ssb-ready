@@ -8,6 +8,27 @@ import 'package:ssb_ready_app/presentation/bloc/ppdt/ppdt_state.dart';
 class PpdtResultScreen extends StatelessWidget {
   const PpdtResultScreen({super.key});
 
+  Future<bool> _confirmExit(BuildContext context) async {
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Exit PPDT results?'),
+        content: const Text('Are you sure you want to leave the result screen?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Stay'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+    return shouldExit == true;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -16,8 +37,10 @@ class PpdtResultScreen extends StatelessWidget {
         title: const Text('AI Analysis Result'),
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () {
-            Navigator.popUntil(context, ModalRoute.withName('/dashboard'));
+          onPressed: () async {
+            if (await _confirmExit(context) && context.mounted) {
+              Navigator.popUntil(context, ModalRoute.withName('/dashboard'));
+            }
           },
         ),
       ),
@@ -129,9 +152,11 @@ class PpdtResultScreen extends StatelessWidget {
                 ],
                 const SizedBox(height: 32),
                 ElevatedButton(
-                  onPressed: () {
-                    Navigator.popUntil(
-                        context, ModalRoute.withName('/dashboard'));
+                  onPressed: () async {
+                    if (await _confirmExit(context) && context.mounted) {
+                      Navigator.popUntil(
+                          context, ModalRoute.withName('/dashboard'));
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.secondary,

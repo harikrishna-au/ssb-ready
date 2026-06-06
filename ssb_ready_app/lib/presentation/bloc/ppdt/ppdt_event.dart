@@ -12,6 +12,8 @@ abstract class PpdtEvent extends Equatable {
 
 class BeginPpdtFlow extends PpdtEvent {}
 
+class ResetPpdtFlow extends PpdtEvent {}
+
 class AcceptPictureViewing extends PpdtEvent {}
 
 class SelectStoryMode extends PpdtEvent {
@@ -25,9 +27,13 @@ class SelectStoryMode extends PpdtEvent {
 
 class TickPrepTimer extends PpdtEvent {}
 
+class SkipPrep extends PpdtEvent {}
+
 class StartObservation extends PpdtEvent {}
 
 class TickObservationTimer extends PpdtEvent {}
+
+class TickPerceptionTimer extends PpdtEvent {}
 
 class SubmitPerceptionMeta extends PpdtEvent {
   final String situationSummary;

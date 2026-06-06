@@ -252,13 +252,17 @@ class FirebaseAuthService implements AuthService {
           nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
 
       String userType = '';
+      bool isPremium = false;
       try {
-        userType = await _fetchRemoteUserType(user.uid);
-        if (userType.isEmpty) {
+        final remoteUserData = await _fetchRemoteUserData(user.uid);
+        userType = remoteUserData['userType']?.toString().trim() ?? '';
+        isPremium = remoteUserData['isPremium'] == true;
+        if (userType.isEmpty && !isPremium) {
           final cachedJson = _prefs.getString(_userCacheKey);
           if (cachedJson != null) {
             final Map<String, dynamic> userMap = jsonDecode(cachedJson);
             userType = userMap['userType'] ?? '';
+            isPremium = userMap['isPremium'] == true;
           }
         }
       } catch (_) {
@@ -268,6 +272,7 @@ class FirebaseAuthService implements AuthService {
           try {
             final Map<String, dynamic> userMap = jsonDecode(cachedJson);
             userType = userMap['userType'] ?? '';
+            isPremium = userMap['isPremium'] == true;
           } catch (_) {}
         }
       }
@@ -278,9 +283,9 @@ class FirebaseAuthService implements AuthService {
         lastName: lastName,
         email: user.email ?? '',
         userType: userType,
+        isPremium: isPremium,
         createdAt: user.metadata.creationTime ?? DateTime.now(),
         updatedAt: user.metadata.lastSignInTime ?? DateTime.now(),
-        isPremium: false,
       );
 
       await _cacheUser(userModel);
@@ -375,24 +380,22 @@ class FirebaseAuthService implements AuthService {
         );
   }
 
-  Future<String> _fetchRemoteUserType(String uid) async {
+  Future<Map<String, dynamic>> _fetchRemoteUserData(String uid) async {
     if (_apiClient.isConfigured) {
       final response = await _apiClient.get('/api/firestore/user/profile');
       final data = response['data'];
       if (data is Map<String, dynamic>) {
-        final v = data['userType'];
-        return v == null ? '' : '$v'.trim();
+        return data;
       }
-      return '';
+      return const {};
     }
     final snap =
         await FirebaseFirestore.instance.collection('users').doc(uid).get();
     final data = snap.data();
     if (data == null) {
-      return '';
+      return const {};
     }
-    final v = data['userType'];
-    return v == null ? '' : '$v'.trim();
+    return data;
   }
 
   /// Call once after [Firebase.initializeApp] to silence null X-Firebase-Locale warnings.

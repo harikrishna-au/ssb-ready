@@ -9,6 +9,27 @@ import 'package:ssb_ready_app/presentation/bloc/tat/tat_state.dart';
 class TatResultScreen extends StatelessWidget {
   const TatResultScreen({super.key});
 
+  Future<bool> _confirmExit(BuildContext context) async {
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Exit TAT results?'),
+        content: const Text('Are you sure you want to leave the result screen?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Stay'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+    return shouldExit == true;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -17,8 +38,10 @@ class TatResultScreen extends StatelessWidget {
         title: const Text('TAT Assessment'),
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () {
-            Navigator.popUntil(context, ModalRoute.withName('/dashboard'));
+          onPressed: () async {
+            if (await _confirmExit(context) && context.mounted) {
+              Navigator.popUntil(context, ModalRoute.withName('/dashboard'));
+            }
           },
         ),
       ),
@@ -52,8 +75,12 @@ class TatResultScreen extends StatelessWidget {
                     Text(state.errorMessage!, textAlign: TextAlign.center),
                     const SizedBox(height: 24),
                     ElevatedButton(
-                      onPressed: () =>
-                          Navigator.popUntil(context, ModalRoute.withName('/dashboard')),
+                      onPressed: () async {
+                        if (await _confirmExit(context) && context.mounted) {
+                          Navigator.popUntil(
+                              context, ModalRoute.withName('/dashboard'));
+                        }
+                      },
                       child: const Text('Back'),
                     ),
                   ],
@@ -172,8 +199,10 @@ class TatResultScreen extends StatelessWidget {
                 if (state.currentImageIndex < state.totalImages - 1)
                   const SizedBox(height: 12),
                 ElevatedButton(
-                  onPressed: () {
-                    Navigator.popUntil(context, ModalRoute.withName('/dashboard'));
+                  onPressed: () async {
+                    if (await _confirmExit(context) && context.mounted) {
+                      Navigator.popUntil(context, ModalRoute.withName('/dashboard'));
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.secondary,

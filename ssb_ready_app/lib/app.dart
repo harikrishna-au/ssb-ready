@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -19,6 +20,7 @@ import 'package:ssb_ready_app/presentation/screens/psychology/psychology_hub_scr
 import 'package:ssb_ready_app/presentation/screens/srt/srt_screen.dart';
 import 'package:ssb_ready_app/presentation/screens/srt/srt_result_screen.dart';
 import 'package:ssb_ready_app/presentation/screens/profile/profile_screen.dart';
+import 'package:ssb_ready_app/presentation/screens/premium/lifetime_premium_screen.dart';
 import 'package:ssb_ready_app/presentation/screens/psychology/tat_screen.dart';
 import 'package:ssb_ready_app/presentation/screens/psychology/tat_result_screen.dart';
 import 'package:ssb_ready_app/presentation/screens/interview/interview_hub_screen.dart';
@@ -139,7 +141,7 @@ class App extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
           ),
         ),
-        pageTransitionsTheme: const PageTransitionsTheme(
+        pageTransitionsTheme: PageTransitionsTheme(
           builders: {
             TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
             TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
@@ -162,6 +164,7 @@ class App extends StatelessWidget {
         '/srt': (context) => const SrtScreen(),
         '/srt-result': (context) => const SrtResultScreen(),
         '/profile': (context) => const ProfileScreen(),
+        '/premium': (context) => const LifetimePremiumScreen(),
         '/tat': (context) => const TatScreen(),
         '/tat-result': (context) => const TatResultScreen(),
         '/interview': (context) => const InterviewHubScreen(),

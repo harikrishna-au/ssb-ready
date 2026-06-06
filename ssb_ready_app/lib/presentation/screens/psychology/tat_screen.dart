@@ -34,13 +34,6 @@ class _TatScreenState extends State<TatScreen> {
   final TextEditingController _storyController = TextEditingController();
   final TextEditingController _ocrController = TextEditingController();
   final TextEditingController _summaryController = TextEditingController();
-  final TextEditingController _sketchNotesController = TextEditingController();
-  final TextEditingController _positiveController =
-      TextEditingController(text: '1');
-  final TextEditingController _negativeController =
-      TextEditingController(text: '0');
-  final TextEditingController _neutralController =
-      TextEditingController(text: '0');
   final List<Offset?> _drawPoints = [];
   final ImagePicker _imagePicker = ImagePicker();
   XFile? _writtenPaperImage;
@@ -50,76 +43,124 @@ class _TatScreenState extends State<TatScreen> {
   int _animationSeed = 0;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<TatBloc>().add(BeginTatFlow());
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _storyController.dispose();
     _ocrController.dispose();
     _summaryController.dispose();
-    _sketchNotesController.dispose();
-    _positiveController.dispose();
-    _negativeController.dispose();
-    _neutralController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Thematic Apperception Test'),
-      ),
-      body: BlocConsumer<TatBloc, TatState>(
-        listener: (context, state) {
-          if (state.phase == TatPhase.writing && state.writingTimeRemaining == 0) {
-            context.read<TatBloc>().add(
-                  SubmitStory(
-                    _storyController.text,
-                    handwrittenText:
-                        state.storyInputMode == StoryInputMode.paper
-                            ? _ocrController.text
-                            : null,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop || !context.mounted) return;
+        await _confirmExit();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text('Thematic Apperception Test'),
+          leading: IconButton(
+            tooltip: 'Exit TAT',
+            icon: const Icon(Icons.close),
+            onPressed: _confirmExit,
+          ),
+        ),
+        body: BlocConsumer<TatBloc, TatState>(
+          listener: (context, state) {
+            if (state.phase == TatPhase.writing &&
+                state.writingTimeRemaining == 0) {
+              context.read<TatBloc>().add(
+                    SubmitStory(
+                      _storyController.text,
+                      handwrittenText:
+                          state.storyInputMode == StoryInputMode.paper
+                              ? _ocrController.text
+                              : null,
+                    ),
+                  );
+            } else if (state.phase == TatPhase.completed) {
+              Navigator.pushReplacementNamed(context, '/tat-result');
+            }
+          },
+          builder: (context, state) {
+            switch (state.phase) {
+              case TatPhase.initial:
+                return _buildInitialView(context, state);
+              case TatPhase.waitingPictureConsent:
+                return _buildConsentView(context);
+              case TatPhase.modeSelection:
+                return _buildModeView(context);
+              case TatPhase.prep:
+                return _buildPrepView(state);
+              case TatPhase.observing:
+                return _buildObservingView(context, state);
+              case TatPhase.perceptionCapture:
+                return _buildPerceptionView(context, state);
+              case TatPhase.writing:
+                return _buildWritingView(context, state);
+              case TatPhase.analyzing:
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Analyzing…',
+                          style: TextStyle(color: AppColors.textSecondary)),
+                    ],
                   ),
                 );
-          } else if (state.phase == TatPhase.completed) {
-            Navigator.pushReplacementNamed(context, '/tat-result');
-          }
-        },
-        builder: (context, state) {
-          switch (state.phase) {
-            case TatPhase.initial:
-              return _buildInitialView(context, state);
-            case TatPhase.waitingPictureConsent:
-              return _buildConsentView(context);
-            case TatPhase.modeSelection:
-              return _buildModeView(context);
-            case TatPhase.prep:
-              return _buildPrepView(state);
-            case TatPhase.observing:
-              return _buildObservingView(context, state);
-            case TatPhase.perceptionCapture:
-              return _buildPerceptionView(context);
-            case TatPhase.writing:
-              return _buildWritingView(context, state);
-            case TatPhase.analyzing:
-              return const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Analyzing…', style: TextStyle(color: AppColors.textSecondary)),
-                  ],
-                ),
-              );
-            default:
-              return const Center(child: CircularProgressIndicator());
-          }
-        },
+              default:
+                return const Center(child: CircularProgressIndicator());
+            }
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildPerceptionView(BuildContext context) {
+  Future<bool> _confirmExit() async {
+    if (!mounted) return false;
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Exit TAT?'),
+        content: const Text(
+            'Are you sure you want to exit this practice screen? Your current progress will be lost.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Stay'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldExit == true && mounted) {
+      Navigator.pop(context);
+      return true;
+    }
+    return false;
+  }
+
+  Widget _buildPerceptionView(BuildContext context, TatState state) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -128,6 +169,11 @@ class _TatScreenState extends State<TatScreen> {
           const Text(
             'Perception capture',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Time remaining: 00:${state.perceptionTimeRemaining.toString().padLeft(2, '0')}',
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -139,44 +185,8 @@ class _TatScreenState extends State<TatScreen> {
             maxLines: 2,
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _positiveController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Positive',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _negativeController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Negative',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _neutralController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Neutral',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Text('Quick sketch', style: TextStyle(fontWeight: FontWeight.w600)),
+          const Text('Quick sketch',
+              style: TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           Container(
             height: 200,
@@ -199,28 +209,17 @@ class _TatScreenState extends State<TatScreen> {
             onPressed: () => setState(() => _drawPoints.clear()),
             child: const Text('Clear sketch'),
           ),
-          TextField(
-            controller: _sketchNotesController,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Notes',
-              border: OutlineInputBorder(),
-            ),
-          ),
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
               context.read<TatBloc>().add(
                     SubmitPerceptionMeta(
                       situationSummary: _summaryController.text.trim(),
-                      positiveCharacters:
-                          int.tryParse(_positiveController.text.trim()) ?? 0,
-                      negativeCharacters:
-                          int.tryParse(_negativeController.text.trim()) ?? 0,
-                      neutralCharacters:
-                          int.tryParse(_neutralController.text.trim()) ?? 0,
+                      positiveCharacters: 0,
+                      negativeCharacters: 0,
+                      neutralCharacters: 0,
                       sketchNotes:
-                          '${_sketchNotesController.text.trim()}\n[strokes: ${_drawPoints.where((p) => p != null).length}]',
+                          '[strokes: ${_drawPoints.where((p) => p != null).length}]',
                     ),
                   );
             },
@@ -290,14 +289,16 @@ class _TatScreenState extends State<TatScreen> {
                             OutlinedButton.icon(
                               onPressed: _ocrBusy
                                   ? null
-                                  : () => _pickWrittenPaper(ImageSource.gallery),
+                                  : () =>
+                                      _pickWrittenPaper(ImageSource.gallery),
                               icon: const Icon(Icons.photo_library_outlined),
                               label: const Text('Upload'),
                             ),
                             if (_writtenPaperImage != null && !_ocrBusy)
                               TextButton.icon(
                                 onPressed: _extractOcr,
-                                icon: const Icon(Icons.document_scanner_outlined),
+                                icon:
+                                    const Icon(Icons.document_scanner_outlined),
                                 label: const Text('Extract again'),
                               ),
                           ],
@@ -381,7 +382,8 @@ class _TatScreenState extends State<TatScreen> {
   }
 
   Future<void> _pickWrittenPaper(ImageSource source) async {
-    final selected = await _imagePicker.pickImage(source: source, imageQuality: 82);
+    final selected =
+        await _imagePicker.pickImage(source: source, imageQuality: 82);
     if (!mounted || selected == null) return;
     setState(() {
       _writtenPaperImage = selected;
@@ -435,6 +437,10 @@ class _TatScreenState extends State<TatScreen> {
     } finally {
       if (mounted) setState(() => _ocrBusy = false);
     }
+  }
+
+  void _restartIntroAnimation() {
+    setState(() => _animationSeed++);
   }
 }
 
