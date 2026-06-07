@@ -151,7 +151,7 @@ class _WatScreenState extends State<WatScreen> {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 60),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:ssb_ready_app/core/theme/app_colors.dart';
 import 'package:ssb_ready_app/presentation/bloc/auth/auth_bloc.dart';
 import 'package:ssb_ready_app/presentation/widgets/app_brand_logo.dart';
@@ -20,6 +22,14 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+    // Ensure edge-to-edge on splash (Firebase init may reset it)
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ));
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -98,14 +108,21 @@ class _SplashScreenState extends State<SplashScreen>
                       child: const AppBrandLogo(size: 152, borderRadius: 32),
                     ),
                     const SizedBox(height: 24),
-                    Text(
-                      'SSBReady',
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                              ),
+                    ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [Color(0xFFFFFFFF), Color(0xFFB3CFFF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ).createShader(bounds),
+                      child: Text(
+                        'SSBReady',
+                        style: GoogleFonts.orbitron(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: 2,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(

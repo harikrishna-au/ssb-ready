@@ -86,7 +86,7 @@ extension _TatScreenFlow on _TatScreenState {
           ),
           const SizedBox(height: 20),
           ListTile(
-            tileColor: Colors.white,
+            tileColor: AppColors.surface,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             title: const Text('Type in app'),
@@ -96,7 +96,7 @@ extension _TatScreenFlow on _TatScreenState {
           ),
           const SizedBox(height: 12),
           ListTile(
-            tileColor: Colors.white,
+            tileColor: AppColors.surface,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             title: const Text('Write on paper'),
@@ -166,7 +166,7 @@ extension _TatScreenFlow on _TatScreenState {
               borderRadius: BorderRadius.circular(20),
               child: Container(
                 width: double.infinity,
-                color: Colors.white,
+                color: AppColors.surfaceSoft,
                 child: Image.network(
                   state.currentImageUrl,
                   fit: BoxFit.contain,

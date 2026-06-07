@@ -321,7 +321,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                               .textTheme
                                               .bodySmall
                                               ?.copyWith(
-                                                color: Colors.grey[700],
+                                                color: AppColors.textSecondary,
                                               ),
                                           children: [
                                             const TextSpan(
@@ -387,9 +387,9 @@ class _SignupScreenState extends State<SignupScreen> {
                               const SizedBox(height: 24),
                               Row(
                                 children: [
-                                  Expanded(
+                                  const Expanded(
                                     child: Divider(
-                                      color: Colors.grey[300],
+                                      color: AppColors.borderBright,
                                       thickness: 1,
                                     ),
                                   ),
@@ -402,13 +402,13 @@ class _SignupScreenState extends State<SignupScreen> {
                                           .textTheme
                                           .labelSmall
                                           ?.copyWith(
-                                            color: Colors.grey[600],
+                                            color: AppColors.textHint,
                                           ),
                                     ),
                                   ),
-                                  Expanded(
+                                  const Expanded(
                                     child: Divider(
-                                      color: Colors.grey[300],
+                                      color: AppColors.borderBright,
                                       thickness: 1,
                                     ),
                                   ),
@@ -422,7 +422,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                   onPressed:
                                       isLoading ? null : _handleGoogleSignup,
                                   style: OutlinedButton.styleFrom(
-                                    backgroundColor: Colors.white,
+                                    backgroundColor: AppColors.surface,
+                                    foregroundColor: AppColors.textPrimary,
                                   ),
                                   icon: const Icon(Icons.g_mobiledata_rounded,
                                       size: 26),
@@ -439,7 +440,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                         .textTheme
                                         .bodySmall
                                         ?.copyWith(
-                                          color: Colors.grey[600],
+                                          color: AppColors.textSecondary,
                                         ),
                                   ),
                                   GestureDetector(

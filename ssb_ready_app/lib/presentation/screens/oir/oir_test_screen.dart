@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:ssb_ready_app/core/services/history_service.dart';
 import 'package:ssb_ready_app/core/theme/app_colors.dart';
+import 'package:ssb_ready_app/presentation/bloc/auth/auth_bloc.dart';
 import 'package:ssb_ready_app/presentation/bloc/oir/oir_bloc.dart';
 import 'package:ssb_ready_app/presentation/bloc/oir/oir_event.dart';
 import 'package:ssb_ready_app/presentation/bloc/oir/oir_state.dart';
 
-class OirTestScreen extends StatelessWidget {
+class OirTestScreen extends StatefulWidget {
   const OirTestScreen({super.key});
+
+  @override
+  State<OirTestScreen> createState() => _OirTestScreenState();
+}
+
+class _OirTestScreenState extends State<OirTestScreen> {
+  /// Guards against the listener firing more than once if the widget
+  /// tree rebuilds while the bloc is in the terminal `finished` state.
+  bool _historySaved = false;
 
   @override
   Widget build(BuildContext context) {
@@ -21,15 +32,31 @@ class OirTestScreen extends StatelessWidget {
         ],
       ),
       body: BlocConsumer<OirBloc, OirState>(
+        // Only invoke listener when we're transitioning INTO `finished`
+        listenWhen: (prev, curr) =>
+            prev.status != OirStatus.finished &&
+            curr.status == OirStatus.finished,
         listener: (context, state) {
-          if (state.status == OirStatus.finished) {
-            _showResultsDialog(
-              context,
-              state.score,
-              state.questions.length,
-              state.feedbackMarkdown,
+          if (_historySaved) return;
+          _historySaved = true;
+
+          final authState = context.read<AuthBloc>().state;
+          if (authState is AuthAuthenticated) {
+            HistoryService.save(
+              userId: authState.user.id,
+              testType: 'OIR',
+              score: state.score,
+              answeredCount: state.score,
+              totalCount: state.questions.length,
+              feedback: state.feedbackMarkdown ?? '',
             );
           }
+          _showResultsDialog(
+            context,
+            state.score,
+            state.questions.length,
+            state.feedbackMarkdown,
+          );
         },
         builder: (context, state) {
           if (state.status == OirStatus.loading) {
@@ -102,7 +129,7 @@ class OirTestScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40),
+            padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
               'This test contains verbal and non-verbal reasoning questions. You have 10 minutes.',
               textAlign: TextAlign.center,
@@ -162,7 +189,7 @@ class OirTestScreen extends StatelessWidget {
                       child: Container(
                         width: double.infinity,
                         constraints: const BoxConstraints(maxHeight: 320),
-                        color: Colors.white,
+                        color: AppColors.surfaceSoft,
                         child: Image.network(
                           question.imageUrl!,
                           fit: BoxFit.contain,
@@ -183,7 +210,7 @@ class OirTestScreen extends StatelessWidget {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: Material(
-                        color: Colors.white,
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(18),
                         shadowColor: AppColors.primary.withValues(alpha: 0.12),
                         elevation: 0.6,
@@ -316,7 +343,7 @@ class OirTestScreen extends StatelessWidget {
   }
 
   String _getRatingMessage(int score, int total) {
-    final percentage = (score / total) * 100;
+    final percentage = total > 0 ? (score / total) * 100 : 0.0;
     if (percentage >= 80) return 'Outstanding! You are on track for OIR-1.';
     if (percentage >= 60) return 'Good job! Aim for OIR-1 with more practice.';
     return 'Keep practicing! You can do better.';

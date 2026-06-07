@@ -37,48 +37,90 @@ class CustomTextField extends StatefulWidget {
   State<CustomTextField> createState() => _CustomTextFieldState();
 }
 
-class _CustomTextFieldState extends State<CustomTextField> {
+class _CustomTextFieldState extends State<CustomTextField>
+    with SingleTickerProviderStateMixin {
   late bool _isObscured;
   bool _isFocused = false;
+  late AnimationController _glowController;
+  late Animation<double> _glowAnimation;
 
   @override
   void initState() {
     super.initState();
     _isObscured = widget.obscureText;
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    );
+    _glowAnimation = CurvedAnimation(
+      parent: _glowController,
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  void dispose() {
+    _glowController.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChange(bool focused) {
+    setState(() => _isFocused = focused);
+    if (focused) {
+      _glowController.forward();
+    } else {
+      _glowController.reverse();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final hasError = widget.errorText != null && widget.errorText!.isNotEmpty;
+    final borderColor = hasError
+        ? AppColors.error
+        : _isFocused
+            ? AppColors.primary
+            : AppColors.border;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          widget.label,
-          style: const TextStyle(
+        // Label
+        AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 200),
+          style: TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
+            color: hasError
+                ? AppColors.error
+                : _isFocused
+                    ? AppColors.primary
+                    : AppColors.textSecondary,
           ),
+          child: Text(widget.label),
         ),
         const SizedBox(height: 8),
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: _isFocused
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      blurRadius: 20,
-                      spreadRadius: 1,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : const [],
+
+        // Field with animated glow
+        AnimatedBuilder(
+          animation: _glowAnimation,
+          builder: (context, child) => Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: (hasError ? AppColors.error : AppColors.primary)
+                      .withValues(alpha: 0.14 * _glowAnimation.value),
+                  blurRadius: 20,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: child,
           ),
           child: Focus(
-            onFocusChange: (focused) => setState(() => _isFocused = focused),
+            onFocusChange: _onFocusChange,
             child: TextField(
               controller: widget.controller,
               keyboardType: widget.keyboardType,
@@ -87,27 +129,62 @@ class _CustomTextFieldState extends State<CustomTextField> {
               focusNode: widget.focusNode,
               onChanged: widget.onChanged,
               onEditingComplete: widget.onEditingComplete,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
               decoration: InputDecoration(
                 hintText: widget.hint,
                 prefixIcon: widget.prefixIcon,
                 suffixIcon: (widget.obscureText || widget.isPassword)
-                    ? GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _isObscured = !_isObscured;
-                          });
-                        },
-                        child: Icon(
-                          _isObscured ? Icons.visibility_off : Icons.visibility,
+                    ? IconButton(
+                        onPressed: () =>
+                            setState(() => _isObscured = !_isObscured),
+                        icon: Icon(
+                          _isObscured
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
                           color: AppColors.textSecondary,
+                          size: 20,
                         ),
                       )
                     : widget.suffixIcon,
-                errorText: widget.errorText,
+                // Override border colors per-field based on state
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(color: borderColor, width: _isFocused ? 1.8 : 1.0),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(color: borderColor, width: 1.8),
+                ),
               ),
             ),
           ),
         ),
+
+        // Error message
+        if (hasError) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(Icons.error_outline_rounded,
+                  size: 13, color: AppColors.error),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  widget.errorText!,
+                  style: const TextStyle(
+                    color: AppColors.error,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }

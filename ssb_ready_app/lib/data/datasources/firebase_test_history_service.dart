@@ -15,34 +15,22 @@ class FirebaseTestHistoryService implements TestHistoryRepository {
 
   @override
   Future<void> saveOirResult(OirResultModel result) async {
-    await _apiClient.post('/api/firestore/oir/results', {
-      ...result.toJson(),
-      'completedAt': result.completedAt.toIso8601String(),
-    });
+    await _apiClient.post('/api/firestore/oir/results', result.toJson());
   }
 
   @override
   Future<void> savePpdtResult(PpdtResultModel result) async {
-    await _apiClient.post('/api/firestore/ppdt/results', {
-      ...result.toJson(),
-      'completedAt': result.completedAt.toIso8601String(),
-    });
+    await _apiClient.post('/api/firestore/ppdt/results', result.toJson());
   }
 
   @override
   Future<void> saveWatResult(WatResultModel result) async {
-    await _apiClient.post('/api/firestore/wat/results', {
-      ...result.toJson(),
-      'completedAt': result.completedAt.toIso8601String(),
-    });
+    await _apiClient.post('/api/firestore/wat/results', result.toJson());
   }
 
   @override
   Future<void> saveSrtResult(SrtResultModel result) async {
-    await _apiClient.post('/api/firestore/srt/results', {
-      ...result.toJson(),
-      'completedAt': result.completedAt.toIso8601String(),
-    });
+    await _apiClient.post('/api/firestore/srt/results', result.toJson());
   }
 
   @override
@@ -87,10 +75,7 @@ class FirebaseTestHistoryService implements TestHistoryRepository {
 
   @override
   Future<void> saveTatResult(TatResultModel result) async {
-    await _apiClient.post('/api/firestore/tat/results', {
-      ...result.toJson(),
-      'completedAt': result.completedAt.toIso8601String(),
-    });
+    await _apiClient.post('/api/firestore/tat/results', result.toJson());
   }
 
   @override
