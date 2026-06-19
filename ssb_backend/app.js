@@ -3,9 +3,6 @@ const cors = require('cors');
 const { config, getCorsOriginOption } = require('./config');
 const { requestContext } = require('./middleware/requestContext');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
-const authRoutes = require('./routes/authRoutes');
-const assessmentRoutes = require('./routes/assessmentRoutes');
-const piqRoutes = require('./routes/piqRoutes');
 const interviewRoutes = require('./routes/interviewRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const evaluationRoutes = require('./routes/evaluationRoutes');
@@ -50,14 +47,11 @@ function createApp() {
 
   app.use('/', legalRoutes);
   app.use('/api/health', healthRoutes);
-  app.use('/api/auth', authRoutes);
   app.use('/api/evaluate', evaluationRoutes);
   app.use('/api/evaluation', evaluationPipelineRoutes);
   app.use('/api/firestore', firestoreRoutes);
   app.use('/api/ppdt', ppdtRoutes);
   app.use('/api/tat', tatRoutes);
-  app.use('/api', assessmentRoutes);
-  app.use('/api/piq', piqRoutes);
   app.use('/api/interview', interviewRoutes);
 
   app.use(notFound);

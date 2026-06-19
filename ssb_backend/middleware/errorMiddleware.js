@@ -6,7 +6,17 @@ function notFound(req, _res, next) {
 
 function errorHandler(err, req, res, _next) {
   const statusCode = err.statusCode || 500;
-  const message = err.message || 'Internal server error';
+  const isServerError = statusCode >= 500;
+  const isProd = (process.env.NODE_ENV || 'development') === 'production';
+
+  // In production, hide internal error details for 5xx responses to avoid leaking implementation details.
+  const message = isServerError && isProd
+    ? 'Internal server error'
+    : err.message || 'Internal server error';
+
+  if (isServerError) {
+    console.error(`[${req.requestId}] ${req.method} ${req.originalUrl}`, err);
+  }
 
   res.status(statusCode).json({
     success: false,

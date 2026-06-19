@@ -179,17 +179,23 @@ async function syncFirestoreProfile(token: string, payload: Record<string, unkno
   const backendUrl = normalizeText(Deno.env.get("BACKEND_URL"));
   if (!backendUrl) return;
 
-  const res = await fetch(`${backendUrl.replace(/\/$/, "")}/api/firestore/user/profile`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
+  try {
+    const res = await fetch(`${backendUrl.replace(/\/$/, "")}/api/firestore/user/profile`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
 
-  if (!res.ok) {
-    throw new Error(`Firestore premium sync failed: ${await res.text()}`);
+    if (!res.ok) {
+      // Non-fatal: Supabase records already updated; log and continue.
+      console.warn(`[lifetime-premium] Firestore premium sync failed (${res.status}): ${await res.text()}`);
+    }
+  } catch (err) {
+    // Non-fatal: network error during optional Firestore sync.
+    console.warn("[lifetime-premium] Firestore premium sync error:", err);
   }
 }
 

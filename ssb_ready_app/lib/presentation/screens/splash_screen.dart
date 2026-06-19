@@ -115,7 +115,7 @@ class _SplashScreenState extends State<SplashScreen>
                         end: Alignment.bottomRight,
                       ).createShader(bounds),
                       child: Text(
-                        'SSBReady',
+                        'SSB Ready',
                         style: GoogleFonts.orbitron(
                           fontSize: 32,
                           fontWeight: FontWeight.w800,
@@ -129,6 +129,14 @@ class _SplashScreenState extends State<SplashScreen>
                       'Train Smart. Lead Strong.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Independent preparation app for defence aspirants',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.55),
+                            fontSize: 11,
                           ),
                     ),
                   ],

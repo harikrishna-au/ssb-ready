@@ -94,7 +94,7 @@ class App extends StatelessWidget {
         }
       },
       child: MaterialApp(
-      title: 'SSBReady',
+      title: 'SSB Ready: Prep & Mock Tests',
       debugShowCheckedModeBanner: false,
       scrollBehavior: const _AppScrollBehavior(),
       theme: ThemeData(

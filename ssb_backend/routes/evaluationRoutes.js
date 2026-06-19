@@ -1,4 +1,5 @@
 const express = require('express');
+const { firebaseProtect } = require('../middleware/firebaseAuthMiddleware');
 const {
   evaluatePpdtHandler,
   evaluateWatHandler,
@@ -8,9 +9,9 @@ const {
 
 const router = express.Router();
 
-router.post('/ppdt', evaluatePpdtHandler);
-router.post('/wat', evaluateWatHandler);
-router.post('/srt', evaluateSrtHandler);
-router.post('/tat', evaluateTatHandler);
+router.post('/ppdt', firebaseProtect, evaluatePpdtHandler);
+router.post('/wat', firebaseProtect, evaluateWatHandler);
+router.post('/srt', firebaseProtect, evaluateSrtHandler);
+router.post('/tat', firebaseProtect, evaluateTatHandler);
 
 module.exports = router;

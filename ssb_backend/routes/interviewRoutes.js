@@ -1,12 +1,13 @@
 const express = require('express');
-const { protect } = require('../middleware/authMiddleware');
-const { getInterviewQuestions, getInterviewQuestionBankHandler } = require('../controllers/testController');
+const { firebaseProtect } = require('../middleware/firebaseAuthMiddleware');
+const { getInterviewQuestionBankHandler } = require('../controllers/testController');
 const { interviewReplyHandler } = require('../controllers/evaluationController');
 
 const router = express.Router();
 
-router.post('/reply', interviewReplyHandler);
-router.get('/prep', protect, getInterviewQuestions);
-router.get('/bank', protect, getInterviewQuestionBankHandler);
+// /prep requires Supabase PIQ lookup — kept as legacy; unused by current app.
+// /reply and /bank use Firebase auth to match the Flutter BackendApiClient.
+router.post('/reply', firebaseProtect, interviewReplyHandler);
+router.get('/bank', firebaseProtect, getInterviewQuestionBankHandler);
 
 module.exports = router;

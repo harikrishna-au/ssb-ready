@@ -33,7 +33,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     'Improve my psychology scores',
     'Practise GTO & Interview',
     'Stay updated with current affairs',
-    'Just exploring SSBReady',
+    'Just exploring SSB Ready',
   ];
 
   @override
@@ -196,7 +196,7 @@ class _WelcomePage extends StatelessWidget {
           const SizedBox(height: 32),
 
           const Text(
-            'Welcome to SSBReady',
+            'Welcome to SSB Ready',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: AppColors.textPrimary,
@@ -229,6 +229,21 @@ class _WelcomePage extends StatelessWidget {
               _FeaturePill(Icons.bolt_rounded, 'AI Evaluation'),
               _FeaturePill(Icons.newspaper_rounded, 'Current Affairs'),
             ],
+          ),
+          const SizedBox(height: 36),
+
+          // Non-affiliation disclaimer (required by Play Impersonation policy)
+          const Text(
+            'SSB Ready is an independent preparation app for defence '
+            'aspirants. It is not affiliated with, endorsed by, or connected '
+            'to the Services Selection Board, Indian Armed Forces, or '
+            'Government of India.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.textHint,
+              fontSize: 11,
+              height: 1.5,
+            ),
           ),
         ],
       ),
