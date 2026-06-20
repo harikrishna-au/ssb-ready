@@ -16,140 +16,224 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('My Profile'),
-      ),
       body: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
           if (state is! AuthAuthenticated) {
             return const Center(
-                child: Text('Please log in to see your profile.'));
+                child:
+                    Text('Please log in.', style: TextStyle(color: AppColors.textSecondary)));
           }
-
           final user = state.user;
-          final userId = user.id;
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildProfileCard(user),
-                const SizedBox(height: 24),
-                if (user.isPremium != true) ...[
-                  _buildPremiumUpsell(context),
-                  const SizedBox(height: 24),
-                ],
-                const Text(
-                  'Performance Analytics',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              _buildAppBar(context),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                sliver: SliverToBoxAdapter(
+                  child: _buildProfileHero(user),
                 ),
-                const SizedBox(height: 16),
-                _buildOirAnalytics(context, userId),
-                const SizedBox(height: 16),
-                _buildTestCountCards(context, userId),
-              ],
-            ),
+              ),
+              if (user.isPremium != true)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: _buildPremiumUpsell(context),
+                  ),
+                ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 4),
+                sliver: const SliverToBoxAdapter(
+                  child: _SectionLabel(label: 'PERFORMANCE ANALYTICS'),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                sliver: SliverToBoxAdapter(
+                  child: _buildOirChart(context, user.id),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                sliver: SliverToBoxAdapter(
+                  child: _buildTestGrid(context, user.id),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                sliver: SliverToBoxAdapter(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, '/history'),
+                    child: Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: const Row(children: [
+                        Icon(Icons.history_rounded, color: AppColors.primary),
+                        SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Test History',
+                                  style: TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15)),
+                              SizedBox(height: 2),
+                              Text('View all your past test results',
+                                  style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right_rounded,
+                            color: AppColors.textHint, size: 20),
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
     );
   }
 
-  Widget _buildProfileCard(dynamic user) {
-    final fullName = '${user.firstName ?? ''} ${user.lastName ?? ''}'.trim();
+  SliverAppBar _buildAppBar(BuildContext context) {
+    return SliverAppBar(
+      pinned: true,
+      backgroundColor: AppColors.background,
+      surfaceTintColor: Colors.transparent,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+            size: 18, color: AppColors.textPrimary),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: const Text(
+        'My Profile',
+        style: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileHero(dynamic user) {
+    final initials = ((user.firstName ?? 'A').isNotEmpty
+            ? (user.firstName as String)[0]
+            : 'A')
+        .toUpperCase();
+    final fullName =
+        '${user.firstName ?? ''} ${user.lastName ?? ''}'.trim();
+    final isPremium = user.isPremium == true;
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: AppColors.brandGradient,
+          colors: [Color(0xFF0D1630), Color(0xFF0A0B0F)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.20), width: 1),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.25),
-            blurRadius: 16,
+            color: AppColors.primary.withValues(alpha: 0.08),
+            blurRadius: 24,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          CircleAvatar(
-            radius: 36,
-            backgroundColor: Colors.white.withValues(alpha: 0.2),
-            child: Text(
-              (user.firstName ?? 'A')[0].toUpperCase(),
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+          Row(
+            children: [
+              // Avatar with gradient ring
+              Container(
+                padding: const EdgeInsets.all(2.5),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isPremium
+                        ? [AppColors.premiumColor, const Color(0xFFFF9500)]
+                        : AppColors.brandGradient,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: const BoxDecoration(
+                    color: AppColors.bgSurface,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      initials,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  fullName.isNotEmpty ? fullName : 'Aspirant',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  user.email ?? '',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withValues(alpha: 0.85),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    user.userType?.isNotEmpty == true
-                        ? user.userType!
-                        : 'No Entry Selected',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+              const SizedBox(width: 18),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      fullName.isNotEmpty ? fullName : 'Aspirant',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.3,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: user.isPremium == true
-                        ? Colors.amber.withValues(alpha: 0.22)
-                        : Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    user.isPremium == true ? 'Lifetime Premium' : 'Free Plan',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                    const SizedBox(height: 4),
+                    Text(
+                      user.email ?? '',
+                      style: const TextStyle(
+                          fontSize: 13, color: AppColors.textSecondary),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        if (user.userType?.isNotEmpty == true) ...[
+                          _Chip(
+                            label: user.userType!,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        _Chip(
+                          label:
+                              isPremium ? 'Lifetime Premium' : 'Free Plan',
+                          color: isPremium
+                              ? AppColors.premiumColor
+                              : AppColors.textHint,
+                          icon: isPremium
+                              ? Icons.workspace_premium_outlined
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -157,118 +241,118 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildPremiumUpsell(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F766E), Color(0xFF115E59)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, '/premium'),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.accent.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+              color: AppColors.accent.withValues(alpha: 0.25), width: 1),
         ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Unlock Lifetime Premium',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
+        child: Row(
+          children: [
+            const Icon(Icons.workspace_premium_outlined,
+                color: AppColors.accent),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Unlock Lifetime Premium',
+                    style: TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Full image banks, all TAT cards — ₹299 one-time.',
+                    style: TextStyle(
+                        color: AppColors.textSecondary, fontSize: 12),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Get full access to all PPDT and TAT images, premium practice sets, and your lifetime plan for only ₹299.',
-            style: TextStyle(color: Colors.white70, height: 1.4),
-          ),
-          const SizedBox(height: 14),
-          OutlinedButton(
-            onPressed: () => Navigator.pushNamed(context, '/premium'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
-              side: const BorderSide(color: Colors.white70),
-            ),
-            child: const Text('View Premium Offer'),
-          ),
-        ],
+            const Icon(Icons.chevron_right_rounded,
+                color: AppColors.accent, size: 18),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildOirAnalytics(BuildContext context, String userId) {
+  Widget _buildOirChart(BuildContext context, String userId) {
     return FutureBuilder<List<OirResultModel>>(
       future: context.read<TestHistoryRepository>().getOirHistory(userId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-              child: Padding(
-            padding: EdgeInsets.all(20),
-            child: CircularProgressIndicator(),
-          ));
+          return _loadingCard();
         }
 
         final results = snapshot.data ?? [];
 
         if (results.isEmpty) {
-          return _buildEmptyCard(
-            'OIR Score Trend',
-            'Complete an OIR test to start tracking your reasoning scores.',
-            Icons.show_chart,
+          return _emptyCard(
+            title: 'OIR Score Trend',
+            message:
+                'Complete an OIR test to start tracking your reasoning scores.',
+            icon: Icons.show_chart_rounded,
           );
         }
 
-        // Show last 5 scores as a simple visual bar chart
-        final recentResults = results.take(5).toList().reversed.toList();
+        final recent = results.take(6).toList().reversed.toList();
 
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Colors.white, AppColors.surfaceSoft],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.border),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 7),
-              ),
-            ],
+            border: Border.all(color: AppColors.border, width: 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.show_chart, color: AppColors.secondary, size: 22),
-                  SizedBox(width: 8),
-                  Text(
+                  const Icon(Icons.show_chart_rounded,
+                      color: AppColors.oirColor, size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
                     'OIR Score Trend',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'Last ${recent.length} attempts',
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.textHint),
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Last ${recentResults.length} attempts',
-                style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-              ),
               const SizedBox(height: 20),
               SizedBox(
-                height: 120,
+                height: 110,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
-                  children: recentResults.asMap().entries.map((entry) {
-                    final result = entry.value;
-                    final percentage = result.totalQuestions > 0
-                        ? result.score / result.totalQuestions
+                  children: recent.asMap().entries.map((entry) {
+                    final r = entry.value;
+                    final pct = r.totalQuestions > 0
+                        ? r.score / r.totalQuestions
                         : 0.0;
-                    final barHeight = 100.0 * percentage;
+                    final barH = (90.0 * pct).clamp(8.0, 90.0);
+                    final color = pct >= 0.7
+                        ? AppColors.success
+                        : pct >= 0.5
+                            ? AppColors.accent
+                            : AppColors.error;
 
                     return Expanded(
                       child: Padding(
@@ -277,20 +361,21 @@ class ProfileScreen extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             Text(
-                              '${result.score}/${result.totalQuestions}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                              '${r.score}/${r.totalQuestions}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: color,
                               ),
                             ),
                             const SizedBox(height: 4),
                             Container(
-                              height: barHeight.clamp(8.0, 100.0),
+                              height: barH,
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
-                                    AppColors.secondaryLight,
-                                    AppColors.secondary,
+                                    color.withValues(alpha: 0.6),
+                                    color,
                                   ],
                                   begin: Alignment.bottomCenter,
                                   end: Alignment.topCenter,
@@ -298,11 +383,11 @@ class ProfileScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 6),
                             Text(
                               '#${entry.key + 1}',
-                              style: TextStyle(
-                                  fontSize: 10, color: Colors.grey[500]),
+                              style: const TextStyle(
+                                  fontSize: 10, color: AppColors.textHint),
                             ),
                           ],
                         ),
@@ -318,9 +403,8 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTestCountCards(BuildContext context, String userId) {
+  Widget _buildTestGrid(BuildContext context, String userId) {
     final repo = context.read<TestHistoryRepository>();
-
     return FutureBuilder(
       future: Future.wait([
         repo.getOirHistory(userId),
@@ -329,178 +413,135 @@ class ProfileScreen extends StatelessWidget {
         repo.getSrtHistory(userId),
         repo.getTatHistory(userId),
       ]),
-      builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox();
-        }
-
+      builder: (context, AsyncSnapshot<List<dynamic>> snap) {
         final oirCount =
-            (snapshot.data?[0] as List<OirResultModel>?)?.length ?? 0;
+            (snap.data?[0] as List<OirResultModel>?)?.length ?? 0;
         final ppdtCount =
-            (snapshot.data?[1] as List<PpdtResultModel>?)?.length ?? 0;
+            (snap.data?[1] as List<PpdtResultModel>?)?.length ?? 0;
         final watCount =
-            (snapshot.data?[2] as List<WatResultModel>?)?.length ?? 0;
+            (snap.data?[2] as List<WatResultModel>?)?.length ?? 0;
         final srtCount =
-            (snapshot.data?[3] as List<SrtResultModel>?)?.length ?? 0;
+            (snap.data?[3] as List<SrtResultModel>?)?.length ?? 0;
         final tatCount =
-            (snapshot.data?[4] as List<TatResultModel>?)?.length ?? 0;
-        final totalTests =
+            (snap.data?[4] as List<TatResultModel>?)?.length ?? 0;
+        final total =
             oirCount + ppdtCount + watCount + srtCount + tatCount;
 
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Total card
             Container(
-              width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.surfaceSoft,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppColors.border),
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primary.withValues(alpha: 0.15),
+                    AppColors.secondary.withValues(alpha: 0.08),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.20),
+                    width: 1),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.secondary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(Icons.military_tech,
-                        color: AppColors.secondary, size: 28),
+                    child: const Icon(Icons.military_tech_rounded,
+                        color: AppColors.primary, size: 28),
                   ),
                   const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Total Tests Completed',
-                          style: TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w500),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Total Tests Completed',
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary),
+                      ),
+                      Text(
+                        '$total',
+                        style: const TextStyle(
+                          fontSize: 38,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.primary,
+                          height: 1.1,
                         ),
-                        Text(
-                          '$totalTests',
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.secondary,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
-            Row(
+            // 2x2 grid of module stats
+            GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              childAspectRatio: 2.0,
               children: [
-                Expanded(
-                    child: _buildMiniStatCard('OIR', oirCount,
-                        Icons.psychology_outlined, AppColors.primaryGreen)),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: _buildMiniStatCard('PPDT', ppdtCount,
-                        Icons.image_outlined, AppColors.secondary)),
+                _ModuleStat('OIR', oirCount, Icons.psychology_outlined,
+                    AppColors.oirColor),
+                _ModuleStat('PPDT', ppdtCount, Icons.image_outlined,
+                    AppColors.ppdtColor),
+                _ModuleStat('WAT', watCount,
+                    Icons.text_fields_rounded, AppColors.accent),
+                _ModuleStat('SRT', srtCount, Icons.flash_on_rounded,
+                    AppColors.secondary),
               ],
             ),
             const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                    child: _buildMiniStatCard('WAT', watCount,
-                        Icons.text_fields_rounded, AppColors.accent)),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: _buildMiniStatCard('SRT', srtCount,
-                        Icons.flash_on_rounded, AppColors.secondary)),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                    child: _buildMiniStatCard('TAT', tatCount,
-                        Icons.image_search_rounded, AppColors.primary)),
-                const Expanded(child: SizedBox()),
-              ],
-            ),
+            _ModuleStat('TAT', tatCount, Icons.image_search_rounded,
+                AppColors.primary,
+                wide: true),
           ],
         );
       },
     );
   }
 
-  Widget _buildMiniStatCard(
-      String label, int count, IconData icon, Color color) {
+  Widget _loadingCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      height: 160,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.14)),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: const Center(child: CircularProgressIndicator()),
+    );
+  }
+
+  Widget _emptyCard(
+      {required String title,
+      required String message,
+      required IconData icon}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border, width: 1),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.primary.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[500],
-                    fontWeight: FontWeight.w500),
-              ),
-              Text(
-                '$count',
-                style: TextStyle(
-                    fontSize: 22, fontWeight: FontWeight.bold, color: color),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyCard(String title, String message, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            blurRadius: 14,
-            offset: const Offset(0, 7),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.12),
             child: Icon(icon, color: AppColors.primary, size: 24),
           ),
           const SizedBox(width: 16),
@@ -508,16 +549,15 @@ class ProfileScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16),
-                ),
+                Text(title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: AppColors.textPrimary)),
                 const SizedBox(height: 4),
-                Text(
-                  message,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                ),
+                Text(message,
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, fontSize: 13)),
               ],
             ),
           ),
@@ -525,4 +565,107 @@ class ProfileScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ModuleStat extends StatelessWidget {
+  final String label;
+  final int count;
+  final IconData icon;
+  final Color color;
+  final bool wide;
+
+  const _ModuleStat(this.label, this.count, this.icon, this.color,
+      {this.wide = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final card = Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border:
+            Border.all(color: color.withValues(alpha: 0.18), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textHint,
+                      fontWeight: FontWeight.w500)),
+              Text(
+                '$count',
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: color),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    return wide ? SizedBox(width: double.infinity, child: card) : card;
+  }
+}
+
+class _Chip extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData? icon;
+  const _Chip({required this.label, required this.color, this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+          horizontal: icon != null ? 7 : 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 10, color: color),
+            const SizedBox(width: 4),
+          ],
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String label;
+  const _SectionLabel({required this.label});
+  @override
+  Widget build(BuildContext context) => Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.4,
+          color: AppColors.textHint,
+        ),
+      );
 }

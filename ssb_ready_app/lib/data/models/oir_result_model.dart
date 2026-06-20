@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class OirResultModel {
   final String id;
@@ -15,25 +14,23 @@ class OirResultModel {
     required this.completedAt,
   });
 
+  /// JSON-serializable map for REST API / jsonEncode.
   Map<String, dynamic> toJson() {
     return {
       'userId': userId,
       'score': score,
       'totalQuestions': totalQuestions,
-      'completedAt': Timestamp.fromDate(completedAt),
+      'completedAt': completedAt.toIso8601String(),
     };
   }
 
   factory OirResultModel.fromJson(Map<String, dynamic> json, String documentId) {
-    final completedAtRaw = json['completedAt'];
     return OirResultModel(
       id: documentId,
       userId: json['userId'] ?? '',
       score: json['score'] ?? 0,
       totalQuestions: json['totalQuestions'] ?? 0,
-      completedAt: completedAtRaw is Timestamp
-          ? completedAtRaw.toDate()
-          : DateTime.tryParse((completedAtRaw ?? '').toString()) ?? DateTime.now(),
+      completedAt: DateTime.tryParse(json['completedAt']?.toString() ?? '') ?? DateTime.now(),
     );
   }
 }

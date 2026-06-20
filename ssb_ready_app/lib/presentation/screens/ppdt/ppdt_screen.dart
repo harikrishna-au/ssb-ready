@@ -172,7 +172,7 @@ class _PpdtScreenState extends State<PpdtScreen> {
           Container(
             height: 220,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surfaceSoft,
               border: Border.all(color: AppColors.border),
               borderRadius: BorderRadius.circular(12),
             ),
@@ -362,7 +362,7 @@ class _PpdtScreenState extends State<PpdtScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: AppColors.surface,
                     ),
                   ),
                 ),

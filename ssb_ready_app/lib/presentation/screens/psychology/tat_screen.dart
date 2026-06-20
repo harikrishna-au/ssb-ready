@@ -191,7 +191,7 @@ class _TatScreenState extends State<TatScreen> {
           Container(
             height: 200,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surfaceSoft,
               border: Border.all(color: AppColors.border),
               borderRadius: BorderRadius.circular(12),
             ),
@@ -339,7 +339,7 @@ class _TatScreenState extends State<TatScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: AppColors.surface,
                     ),
                   ),
                 ),

@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TatResultModel {
   final String id;
@@ -17,27 +16,25 @@ class TatResultModel {
     required this.completedAt,
   });
 
+  /// JSON-serializable map for REST API / jsonEncode.
   Map<String, dynamic> toJson() {
     return {
       'userId': userId,
       'imageIndex': imageIndex,
       'userStory': userStory,
       'aiFeedback': aiFeedback,
-      'completedAt': Timestamp.fromDate(completedAt),
+      'completedAt': completedAt.toIso8601String(),
     };
   }
 
   factory TatResultModel.fromJson(Map<String, dynamic> json, String documentId) {
-    final completedAtRaw = json['completedAt'];
     return TatResultModel(
       id: documentId,
       userId: json['userId'] ?? '',
       imageIndex: json['imageIndex'] ?? 0,
       userStory: json['userStory'] ?? '',
       aiFeedback: json['aiFeedback'] ?? '',
-      completedAt: completedAtRaw is Timestamp
-          ? completedAtRaw.toDate()
-          : DateTime.tryParse((completedAtRaw ?? '').toString()) ?? DateTime.now(),
+      completedAt: DateTime.tryParse(json['completedAt']?.toString() ?? '') ?? DateTime.now(),
     );
   }
 }

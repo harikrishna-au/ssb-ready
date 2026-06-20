@@ -1,5 +1,6 @@
 const OpenAI = require('openai');
 const { config } = require('../config');
+const { logger } = require('../utils/logger');
 
 let openaiClient;
 
@@ -511,7 +512,7 @@ const evaluateTest = async (testType, content, extra = '') => {
     });
     return completion.choices?.[0]?.message?.content || '';
   } catch (error) {
-    console.error('AI Service Error:', error.message);
+    logger.error('AI Service Error:', error.message);
     throw new Error('AI evaluation failed');
   }
 };

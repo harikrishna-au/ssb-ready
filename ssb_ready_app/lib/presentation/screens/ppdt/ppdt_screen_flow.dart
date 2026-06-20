@@ -103,7 +103,7 @@ extension _PpdtScreenFlow on _PpdtScreenState {
           ),
           const SizedBox(height: 20),
           ListTile(
-            tileColor: Colors.white,
+            tileColor: AppColors.surface,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             title: const Text('Type in app'),
@@ -114,7 +114,7 @@ extension _PpdtScreenFlow on _PpdtScreenState {
           ),
           const SizedBox(height: 12),
           ListTile(
-            tileColor: Colors.white,
+            tileColor: AppColors.surface,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             title: const Text('Write on paper'),

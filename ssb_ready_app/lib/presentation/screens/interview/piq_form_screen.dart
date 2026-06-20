@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:ssb_ready_app/core/theme/app_colors.dart';
 import 'package:ssb_ready_app/presentation/bloc/interview/interview_bloc.dart';
 import 'package:ssb_ready_app/presentation/bloc/interview/interview_bloc_state.dart';
 
@@ -24,7 +25,7 @@ class _PiqFormScreenState extends State<PiqFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Digital PIQ Form'),
-        backgroundColor: Colors.blue[700],
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
       body: BlocConsumer<InterviewBloc, InterviewState>(
@@ -75,7 +76,7 @@ class _PiqFormScreenState extends State<PiqFormScreen> {
                       child: ElevatedButton(
                         onPressed: details.onStepContinue,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue[700],
+                          backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
