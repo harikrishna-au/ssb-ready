@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { usePiq } from "@/lib/use-piq";
+import { usePremium } from "@/lib/use-premium";
 import { appCrumbs, backTarget } from "@/lib/nav";
 import { Breadcrumbs } from "./breadcrumbs";
 import { Logo } from "./site/header";
@@ -53,6 +54,7 @@ export function Sidebar() {
   const exam = useStore((s) => s.prefs.exam);
   const piq = usePiq();
   const piqIncomplete = piq.ready && !piq.completeness.complete;
+  const premium = usePremium();
   return (
     <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-white/[0.06] bg-card/30 p-4 md:flex">
       <div className="px-2 pt-1"><Logo /></div>
@@ -71,10 +73,12 @@ export function Sidebar() {
         </div>
       </nav>
 
-      <Link href="/premium" className="mb-3 block rounded-2xl border border-brass/30 bg-brass/10 p-4 transition-colors hover:bg-brass/15">
-        <span className="flex items-center gap-2 font-semibold text-brass"><Crown className="size-4" aria-hidden /> Lifetime access</span>
-        <span className="mt-1 block text-xs text-muted-foreground">Unlock all 45 pictures for PPDT and TAT.</span>
-      </Link>
+      {!premium.loading && !premium.premium && (
+        <Link href="/premium" className="mb-3 block rounded-2xl border border-brass/30 bg-brass/10 p-4 transition-colors hover:bg-brass/15">
+          <span className="flex items-center gap-2 font-semibold text-brass"><Crown className="size-4" aria-hidden /> Lifetime access</span>
+          <span className="mt-1 block text-xs text-muted-foreground">Unlock all 45 pictures for PPDT and TAT.</span>
+        </Link>
+      )}
 
       <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] p-2.5">
         <UserButton />
@@ -90,6 +94,7 @@ export function Sidebar() {
 /** Sticky top bar: back button on nested pages, breadcrumbs everywhere. */
 export function TopBar() {
   const path = usePathname();
+  const premium = usePremium();
   const back = backTarget(path);
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-white/[0.06] bg-background/80 px-4 backdrop-blur-md md:px-8">
@@ -102,9 +107,11 @@ export function TopBar() {
         </Link>
       )}
       <Breadcrumbs items={appCrumbs(path)} className="min-w-0 flex-1" />
-      <Link href="/premium" className="hidden shrink-0 items-center gap-1.5 rounded-full border border-brass/40 px-3 py-1.5 text-xs font-semibold text-brass transition-colors hover:bg-brass/10 sm:inline-flex md:hidden">
-        <Crown className="size-3.5" aria-hidden /> Lifetime
-      </Link>
+      {!premium.loading && !premium.premium && (
+        <Link href="/premium" className="hidden shrink-0 items-center gap-1.5 rounded-full border border-brass/40 px-3 py-1.5 text-xs font-semibold text-brass transition-colors hover:bg-brass/10 sm:inline-flex md:hidden">
+          <Crown className="size-3.5" aria-hidden /> Lifetime
+        </Link>
+      )}
       <div className="md:hidden"><UserButton /></div>
     </header>
   );

@@ -2,13 +2,17 @@
 
 import { Check, Lock } from "lucide-react";
 import Link from "next/link";
+import { Checkout } from "@/components/billing/checkout";
+import { OwnedCard } from "@/components/billing/receipt";
 import { LEGAL } from "@/lib/legal";
 import { usePiq } from "@/lib/use-piq";
+import { usePremium } from "@/lib/use-premium";
 
 /** Two steps: the PIQ must be complete before the payment step unlocks. */
 export default function Premium() {
   const { completeness: c, loading, failed, reload } = usePiq();
   const piqDone = !loading && !failed && c.complete;
+  const own = usePremium();
 
   return (
     <div className="rise max-w-2xl">
@@ -19,6 +23,10 @@ export default function Premium() {
         <li className="flex gap-3"><Check className="mt-1 size-4 shrink-0 text-brass" aria-hidden />No subscription and no renewal</li>
       </ul>
 
+      {own.premium && <OwnedCard since={own.premiumSince} />}
+      {own.failed && <p role="alert" className="mt-6 text-sm text-destructive">Could not check your access. <button className="font-semibold underline" onClick={() => void own.refresh()}>Try again</button></p>}
+
+      {!own.premium && !own.loading && (
       <ol className="mt-10 space-y-4">
         <li className={`rounded-2xl border p-6 ${piqDone ? "border-green-500/40 bg-green-500/5" : "border-primary/40 bg-primary/5"}`}>
           <div className="flex items-start gap-4">
@@ -57,8 +65,8 @@ export default function Premium() {
               <h2 className="text-2xl font-extrabold uppercase">Pay {LEGAL.price}</h2>
               {piqDone ? (
                 <>
-                  <p className="mt-1 font-semibold">Online checkout on the web is being connected.</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Until it is live, write to <a className="text-primary" href={`mailto:${LEGAL.supportEmail}?subject=Lifetime access`}>{LEGAL.supportEmail}</a> and we will set you up.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Your PIQ is on file. Pay once and the full picture bank unlocks straight away. Bought it on the mobile app already? Sign in to the web with the same verified email and it carries over.</p>
+                  <Checkout />
                 </>
               ) : (
                 <p className="mt-1 text-sm text-muted-foreground">Unlocks once your PIQ is complete.</p>
@@ -67,6 +75,7 @@ export default function Premium() {
           </div>
         </li>
       </ol>
+      )}
     </div>
   );
 }
