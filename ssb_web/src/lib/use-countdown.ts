@@ -19,7 +19,7 @@ export function useCountdown(seconds: number, running: boolean, onEnd: () => voi
   const onEndRef = useLatest(onEnd);
 
   useEffect(() => {
-    if (!running) return;
+    if (!running || left <= 0) return; // at zero, stop: onEnd must fire once, not every second
     const t = setTimeout(() => {
       if (left <= 1) onEndRef.current();
       setState({ key: resetKey, left: Math.max(left - 1, 0) });

@@ -2,7 +2,7 @@ const express = require('express');
 const { protect } = require('../middleware/authMiddleware');
 const { loginProxy, signupProxy, getUserProfile } = require('../controllers/userController');
 
-const router = express.Router();
+const router = express.Router({ caseSensitive: true });
 
 router.post('/signup', signupProxy);
 router.post('/login', loginProxy);

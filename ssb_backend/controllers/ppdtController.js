@@ -42,8 +42,9 @@ const runPpdtPipeline = asyncHandler(async (req, res) => {
     return {
       id: doc.id,
       score: Number(data.score || 0),
-      storyPreview: String(data.userStory || '').slice(0, 160),
-      feedbackSummary: String(data.aiFeedback || '').slice(0, 180)
+      // Other candidates' stories are never sent to the model: privacy, and stored prompt injection.
+      storyPreview: '',
+      feedbackSummary: ''
     };
   });
 
@@ -82,8 +83,8 @@ const runPpdtPipeline = asyncHandler(async (req, res) => {
     return {
       id: doc.id,
       score: Number(data.score || 0),
-      storyPreview: String(data.userStory || '').slice(0, 160),
-      feedbackSummary: String(data.aiFeedback || '').slice(0, 180)
+      storyPreview: data.userId === userId ? String(data.userStory || '').slice(0, 160) : '',
+      feedbackSummary: data.userId === userId ? String(data.aiFeedback || '').slice(0, 180) : ''
     };
   });
 

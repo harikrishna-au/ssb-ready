@@ -42,7 +42,8 @@ const config = Object.freeze({
 
   corsOriginRaw: process.env.CORS_ORIGIN || '',
 
-  jsonBodyLimit: process.env.JSON_BODY_LIMIT || '15mb',
+  /** Only the handwriting OCR route accepts a body this large; every other route is capped at 1mb. */
+  jsonBodyLimit: process.env.JSON_BODY_LIMIT || '8mb',
 
   jwtSecret: process.env.JWT_SECRET,
 

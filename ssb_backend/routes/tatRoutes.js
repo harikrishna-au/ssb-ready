@@ -1,9 +1,10 @@
 const express = require('express');
-const { firebaseProtect } = require('../middleware/firebaseAuthMiddleware');
+const { guard, AI } = require('../middleware/guard');
+const schemas = require('../middleware/schemas');
 const { runTatPipeline } = require('../controllers/tatController');
 
-const router = express.Router();
+const router = express.Router({ caseSensitive: true });
 
-router.post('/pipeline', firebaseProtect, runTatPipeline);
+router.post('/pipeline', ...guard({ schema: schemas.tatPipeline, limits: AI }), runTatPipeline);
 
 module.exports = router;
