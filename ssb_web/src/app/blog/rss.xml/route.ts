@@ -3,7 +3,6 @@ import { abs, SITE_NAME } from "@/lib/site";
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-export const dynamic = "force-static";
 
 export function GET() {
   const items = POSTS.map(
