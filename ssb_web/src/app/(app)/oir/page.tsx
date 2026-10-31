@@ -4,19 +4,16 @@
 import { useEffect, useState } from "react";
 import { ErrorView, EvaluatingView, ExamStage, PrimaryButton, ScoreResult, TestIntro } from "@/components/exam/ui";
 import { api } from "@/lib/api";
+import { checkOirAnswer, fetchContent, type OirItem } from "@/lib/content";
 import { fmt, useCountdown, useLatest } from "@/lib/use-countdown";
 import { useLeaveGuard } from "@/lib/use-leave-guard";
 
-type Question = {
-  id: string;
-  text: string;
-  options: string[];
-  correct_answer_index: number;
-  image_url: string | null;
-  explanation: string | null;
-};
+/** No answer here: the server reveals it only after the user commits to an option. */
+type Question = { id: string; text: string; options: string[]; image_url?: string | null };
+type Revealed = { correctIndex: number; explanation: string | null };
 type Phase = "loading" | "intro" | "running" | "analyzing" | "done" | "error";
 const TOTAL_SECONDS = 600;
+const QUESTION_COUNT = 25;
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 
 export default function OirPage() {
@@ -25,15 +22,16 @@ export default function OirPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
+  const [revealed, setRevealed] = useState<Revealed | null>(null);
+  const [checking, setChecking] = useState(false);
   const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState("");
   const scoreRef = useLatest(score);
 
   const fetchQuestions = () =>
-    api
-      .get<{ data: Question[] }>("/api/firestore/oir/questions")
-      .then((r) => { setQuestions(r.data); setPhase("intro"); })
+    fetchContent<OirItem>("oir", QUESTION_COUNT)
+      .then((r) => { setQuestions(r.items.map((i) => ({ id: i.id, text: i.text, options: i.options, image_url: i.image_url }))); setPhase("intro"); })
       .catch((e) => { setError(e instanceof Error ? e.message : "Could not load questions"); setPhase("error"); });
   const retry = () => { setPhase("loading"); void fetchQuestions(); };
   useEffect(() => { void fetchQuestions(); }, []);
@@ -56,12 +54,21 @@ export default function OirPage() {
   const q = questions[index];
 
   const answer = (i: number) => {
-    if (picked !== null || !q) return;
+    if (picked !== null || !q || checking) return;
     setPicked(i);
-    if (i === q.correct_answer_index) setScore((s) => s + 1);
+    setChecking(true);
+    checkOirAnswer(q.id, i)
+      .then((r) => {
+        setRevealed({ correctIndex: r.correctIndex, explanation: r.explanation });
+        if (r.correct) setScore((s) => s + 1);
+      })
+      .catch(() => setRevealed({ correctIndex: -1, explanation: "Could not check this answer. It was not counted." }))
+      .finally(() => setChecking(false));
   };
   const next = () => {
+    if (checking) return;
     setPicked(null);
+    setRevealed(null);
     if (index + 1 < questions.length) setIndex(index + 1);
     else finish(scoreRef.current);
   };
@@ -93,7 +100,7 @@ export default function OirPage() {
         facts={[["Questions", String(questions.length)], ["Time", fmt(TOTAL_SECONDS)], ["Format", "MCQ"], ["Round", "Day 1"]]}
         steps={["One shared clock covers every question.", "Choose an option. You see at once whether it was right.", "Press Next to continue. Unfinished questions score zero.", "You get your total and a short breakdown."]}
         tips={["Skip a question after about 30 seconds and move on.", "Use A–D or 1–4 on your keyboard, and Enter for next.", "Learn the common non-verbal patterns: rotation, mirror image, add and remove.", "Do not leave questions blank when a guess is possible."]}
-        onStart={() => { setIndex(0); setScore(0); setPicked(null); setPhase("running"); }}
+        onStart={() => { setIndex(0); setScore(0); setPicked(null); setRevealed(null); setPhase("running"); }}
       />
     );
 
@@ -104,8 +111,8 @@ export default function OirPage() {
         {q.image_url && <img src={q.image_url} alt="Question figure" className="mt-6 max-h-72 rounded-2xl border border-white/10 bg-white p-2" />}
         <div className="mt-7 grid gap-3" role="group" aria-label="Answer options">
           {q.options.map((o, i) => {
-            const correct = picked !== null && i === q.correct_answer_index;
-            const wrong = picked === i && i !== q.correct_answer_index;
+            const correct = revealed !== null && i === revealed.correctIndex;
+            const wrong = revealed !== null && picked === i && i !== revealed.correctIndex;
             return (
               <button
                 key={i} onClick={() => answer(i)} disabled={picked !== null}
@@ -121,8 +128,8 @@ export default function OirPage() {
         </div>
         {picked !== null && (
           <div className="rise mt-6 space-y-4">
-            {q.explanation && <p className="rounded-xl bg-white/5 p-4 text-sm leading-relaxed text-muted-foreground">{q.explanation}</p>}
-            <PrimaryButton onClick={next}>{index + 1 < questions.length ? "Next question" : "Finish"}</PrimaryButton>
+            {revealed?.explanation && <p className="rounded-xl bg-white/5 p-4 text-sm leading-relaxed text-muted-foreground">{revealed.explanation}</p>}
+            <PrimaryButton onClick={next} disabled={checking}>{index + 1 < questions.length ? "Next question" : "Finish"}</PrimaryButton>
           </div>
         )}
       </ExamStage>

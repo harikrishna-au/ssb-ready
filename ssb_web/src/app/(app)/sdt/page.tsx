@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-import { ErrorView, EvaluatingView, ExamStage, PrimaryButton, TestIntro, WritingPad } from "@/components/exam/ui";
+import { ErrorView, EvaluatingView, ExamStage, ModeSwitch, PrimaryButton, TestIntro, WritingPad } from "@/components/exam/ui";
 import { Markdown } from "@/components/markdown";
 import { api } from "@/lib/api";
+import { useMode } from "@/lib/modes";
 import { useCountdown } from "@/lib/use-countdown";
 import { useLeaveGuard } from "@/lib/use-leave-guard";
 
@@ -15,13 +16,16 @@ const PERSPECTIVES = [
   { key: "subordinates", icon: "⭐", title: "Your juniors or team", prompt: "How do people who look up to you describe your leadership and personality?" },
   { key: "self", icon: "🪞", title: "How you see yourself", prompt: "An honest self-description: strengths, weaknesses, values and what you are working on." },
 ];
-const SECONDS = 720;
+/** Per paragraph. Full test = the real format, about 15 minutes in total. */
+const SECONDS_EACH = { quick: 300, full: 180 } as const;
 
 type Phase = "intro" | "writing" | "analyzing" | "done" | "error";
 
 export default function SdtPage() {
   const [phase, setPhase] = useState<Phase>("intro");
   useLeaveGuard(phase === "writing");
+  const [mode, setMode, premium] = useMode();
+  const [runMode, setRunMode] = useState<"quick" | "full">("quick");
   const [index, setIndex] = useState(0);
   const [text, setText] = useState("");
   const [analysis, setAnalysis] = useState("");
@@ -47,24 +51,25 @@ export default function SdtPage() {
     else analyze();
   };
 
-  const left = useCountdown(SECONDS, phase === "writing", advance, index);
+  const left = useCountdown(SECONDS_EACH[runMode], phase === "writing", advance, index);
 
   if (phase === "intro")
     return (
       <TestIntro
         kicker="Psychology test" code="SDT" title="Self Description Test"
         blurb="Describe yourself through five sets of eyes. Assessors read all five together, so honesty and consistency matter more than flattery."
-        facts={[["Perspectives", "5"], ["Each", "12 min"], ["Total", "60 min"], ["Output", "Analysis"]]}
+        facts={[["Perspectives", "5"], ["Each", `${SECONDS_EACH[mode] / 60} min`], ["Total", `${(SECONDS_EACH[mode] * 5) / 60} min`], ["Output", "Analysis"]]}
         steps={["Five prompts, one after another, each with its own clock.", "Write in your own words. Give examples.", "When a clock ends your text moves on automatically.", "You get an analysis of consistency, qualities and red flags."]}
-        tips={["Describe the same core person from each angle.", "Include one real weakness and what you do about it.", "Back every quality with a short example.", "The real test is about 15 minutes in total. This practice gives more time per paragraph."]}
-        onStart={() => { responses.current = {}; setIndex(0); setText(""); setPhase("writing"); }}
+        tips={["Describe the same core person from each angle.", "Include one real weakness and what you do about it.", "Back every quality with a short example.", "The real test is about 15 minutes in total. Full test mode matches that; quick practice gives more time per paragraph."]}
+        extra={<ModeSwitch mode={mode} onChange={setMode} quick="5 minutes per paragraph, 25 minutes in total. Extra time to think." full="3 minutes per paragraph, 15 minutes in total. The real format." note={premium === false ? "Full test is the default for Lifetime accounts. You can still try it here." : undefined} />}
+        onStart={() => { setRunMode(mode); responses.current = {}; setIndex(0); setText(""); setPhase("writing"); }}
       />
     );
 
   if (phase === "writing") {
     const p = PERSPECTIVES[index];
     return (
-      <ExamStage title="Self Description Test" progress={{ current: index + 1, total: PERSPECTIVES.length }} timer={{ left, total: SECONDS }}>
+      <ExamStage title="Self Description Test" progress={{ current: index + 1, total: PERSPECTIVES.length }} timer={{ left, total: SECONDS_EACH[runMode] }}>
         <p className="text-4xl" aria-hidden>{p.icon}</p>
         <h2 className="mt-2 font-display text-5xl font-black uppercase leading-none">{p.title}</h2>
         <p className="mt-3 text-muted-foreground">{p.prompt}</p>

@@ -12,6 +12,7 @@ const ppdtRoutes = require('./routes/ppdtRoutes');
 const tatRoutes = require('./routes/tatRoutes');
 const evaluationPipelineRoutes = require('./routes/evaluationPipelineRoutes');
 const legalRoutes = require('./routes/legalRoutes');
+const contentRoutes = require('./routes/contentRoutes');
 
 function createApp() {
   const app = express();
@@ -55,6 +56,7 @@ function createApp() {
   app.use('/api/tat', tatRoutes);
   app.use('/api/interview', interviewRoutes);
   app.use('/api/images', imageRoutes);
+  app.use('/api/content', contentRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
