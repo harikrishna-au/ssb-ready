@@ -1,6 +1,6 @@
 import { api } from "./api";
 
-export type Picture = { id: string; url: string };
+export type Picture = { id: string; url: string; token?: string };
 export type PictureSet = { data: Picture[]; premium: boolean; freeLimit: number; available: number };
 export type Alignment = { score: number; matched: string[]; missed: string[]; notes: string };
 

@@ -24,7 +24,7 @@ const extractWrittenPaperText = asyncHandler(async (req, res) => {
 
 const runPpdtPipeline = asyncHandler(async (req, res) => {
   const userId = req.firebaseUser.uid;
-  const { imageId, imageUrl, storyMode, storyText, handwrittenText, perception } = req.body;
+  const { imageId, imageUrl, imageToken, storyMode, storyText, handwrittenText, perception } = req.body;
 
   const finalStory = (storyText || handwrittenText || '').trim();
   if (!finalStory) {
@@ -48,7 +48,7 @@ const runPpdtPipeline = asyncHandler(async (req, res) => {
     };
   });
 
-  const image = await resolveImage({ imageId, imageUrl });
+  const image = await resolveImage({ imageId, imageUrl, imageToken, userId });
 
   const ai = await evaluatePpdtPipeline({
     storyText: finalStory,
@@ -60,12 +60,14 @@ const runPpdtPipeline = asyncHandler(async (req, res) => {
   const docData = {
     userId,
     imageId: image?.id || '',
-    imageUrl: image?.url || '',
+    imageUrl: '', // signed URLs expire; the id is enough to rebuild one
     storyMode: storyMode || 'typing',
     userStory: finalStory,
     aiFeedback: ai.analysisMarkdown,
     identifiedOlqs: ai.olqs || [],
     score: Number(ai.score || 0),
+    promptVersion: ai.meta?.promptVersion || null,
+    model: ai.meta?.model || null,
     completedAt: new Date(),
     perception: perception || {}
   };

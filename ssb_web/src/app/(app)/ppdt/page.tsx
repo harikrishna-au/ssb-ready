@@ -5,7 +5,7 @@ import { useState } from "react";
 import { ErrorView, EvaluatingView, ExamStage, ImageMatch, PrimaryButton, ScoreResult, TestIntro, WritingPad } from "@/components/exam/ui";
 import { Leaderboard, type LeaderboardRow } from "@/components/leaderboard";
 import { api } from "@/lib/api";
-import { fetchPictures, type Alignment } from "@/lib/images";
+import { fetchPictures, type Alignment, type Picture } from "@/lib/images";
 import { useCountdown, useLatest } from "@/lib/use-countdown";
 import { useLeaveGuard } from "@/lib/use-leave-guard";
 
@@ -24,7 +24,7 @@ const FIELDS: [key: "summary" | "positive" | "negative" | "neutral", label: stri
 export default function PpdtPage() {
   const [phase, setPhase] = useState<Phase>("intro");
   useLeaveGuard(phase === "observe" || phase === "perception" || phase === "write");
-  const [picture, setPicture] = useState<{ id: string; url: string } | null>(null);
+  const [picture, setPicture] = useState<Picture | null>(null);
   const [starting, setStarting] = useState(false);
   const [notes, setNotes] = useState({ summary: "", positive: "", negative: "", neutral: "" });
   const [story, setStory] = useState("");
@@ -47,6 +47,7 @@ export default function PpdtPage() {
         await api.post<Result>("/api/ppdt/pipeline", {
           imageId: picture?.id,
           imageUrl: picture?.url,
+          imageToken: picture?.token,
           storyMode: "typing",
           storyText: text,
           perception: { situationSummary: n.summary, positiveCharacters: n.positive, negativeCharacters: n.negative, neutralCharacters: n.neutral, sketchNotes: "" },

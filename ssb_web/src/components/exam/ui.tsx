@@ -3,7 +3,7 @@
 import { ArrowLeft, Check, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Markdown } from "@/components/markdown";
 import { fmt } from "@/lib/use-countdown";
 
@@ -21,6 +21,8 @@ export function TestIntro(props: {
   onStart: () => void;
   loading?: boolean;
   note?: string;
+  /** Extra controls shown above the start button, such as a ModeSwitch. */
+  extra?: ReactNode;
 }) {
   return (
     <div className="rise">
@@ -43,6 +45,7 @@ export function TestIntro(props: {
             ))}
           </dl>
 
+          {props.extra}
           <button
             onClick={props.onStart} disabled={props.loading}
             className="mt-10 inline-flex h-14 items-center rounded-full bg-primary px-9 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30 disabled:opacity-60"
@@ -292,7 +295,7 @@ export function ScoreResult(props: {
   outOf?: number;
   olqs?: string[];
   markdown: string;
-  extra?: React.ReactNode;
+  extra?: ReactNode;
   onRetry: () => void;
   retryLabel?: string;
 }) {
@@ -372,5 +375,35 @@ export function ImageMatch(props: { imageUrl?: string; alignment?: { score: numb
         </div>
       </div>
     </section>
+  );
+}
+
+/** Quick practice vs full (real-format) test. Labels say exactly what each mode contains. */
+export function ModeSwitch(props: {
+  mode: "quick" | "full";
+  onChange: (m: "quick" | "full") => void;
+  quick: string;
+  full: string;
+  note?: string;
+}) {
+  const opts = [
+    { key: "quick" as const, title: "Quick practice", desc: props.quick },
+    { key: "full" as const, title: "Full test", desc: props.full },
+  ];
+  return (
+    <div className="mt-8 max-w-xl">
+      <div role="radiogroup" aria-label="Test mode" className="grid gap-3 sm:grid-cols-2">
+        {opts.map((o) => (
+          <button
+            key={o.key} type="button" role="radio" aria-checked={props.mode === o.key} onClick={() => props.onChange(o.key)}
+            className={`min-h-11 rounded-2xl border p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${props.mode === o.key ? "border-primary bg-primary/10" : "border-white/10 hover:border-white/30"}`}
+          >
+            <span className="block font-semibold">{o.title}</span>
+            <span className="mt-1 block text-sm text-muted-foreground">{o.desc}</span>
+          </button>
+        ))}
+      </div>
+      {props.note && <p className="mt-3 text-sm text-muted-foreground">{props.note}</p>}
+    </div>
   );
 }

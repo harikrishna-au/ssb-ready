@@ -2,19 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ExamStage, PrimaryButton, TestIntro } from "@/components/exam/ui";
-import { shuffle } from "@/lib/images";
+import { fetchContent } from "@/lib/content";
 import { useCountdown } from "@/lib/use-countdown";
 import { useLeaveGuard } from "@/lib/use-leave-guard";
 
-const TOPICS = [
-  "Should India have a larger defence budget?", "Women in combat roles", "Role of the Navy in India's trade security",
-  "Climate change and national security", "Agniveer scheme: pros and cons", "Cyber warfare", "Importance of the Indian Air Force",
-  "Self-reliance in defence manufacturing", "Social media and youth", "Unemployment in India", "Disaster management and the armed forces",
-  "India's neighbourhood policy", "Space technology and defence", "Fitness and discipline in daily life", "Importance of sports in nation building",
-  "Corruption and how to fight it", "Digital India", "Water scarcity", "The role of the United Nations", "Leadership: born or made?",
-  "Terrorism and how a nation responds", "Role of NCC in building character", "Renewable energy for India", "Artificial intelligence in warfare",
-  "Education system reform", "Population growth", "Importance of teamwork", "India's G20 role", "Border area development", "Mental health among youth",
-];
 const SPEAK_SECONDS = 180;
 const BELL_AT = 30; // seconds left
 
@@ -113,7 +104,21 @@ export default function LecturettePage() {
   const [transcript, setTranscript] = useState("");
   const [checked, setChecked] = useState<boolean[]>(CHECKLIST.map(() => false));
 
-  const deal = () => { setOptions(shuffle(TOPICS).slice(0, 4)); setPhase("choose"); };
+  const [dealing, setDealing] = useState(false);
+  const [dealError, setDealError] = useState("");
+  const deal = async () => {
+    setDealing(true);
+    setDealError("");
+    try {
+      const set = await fetchContent("lecturette", 4);
+      setOptions(set.items.map((i) => i.text));
+      setPhase("choose");
+    } catch (e) {
+      setDealError(e instanceof Error ? e.message : "Could not load topics");
+    } finally {
+      setDealing(false);
+    }
+  };
   const words = transcript.trim() ? transcript.trim().split(/\s+/).length : 0;
   const done = checked.filter(Boolean).length;
 
@@ -125,7 +130,7 @@ export default function LecturettePage() {
         facts={[["Topics", "4"], ["Speak", "3 min"], ["Bell at", "2:30"], ["Review", "Checklist"]]}
         steps={["Four random topics are dealt. Pick the one you can speak on longest.", "Start the clock and speak out loud for three minutes.", "A bell sounds at 30 seconds left.", "Read your transcript and tick the structure checklist."]}
         tips={["Open by defining the topic, then make two or three distinct points.", "Back each point with a fact or example.", "Link it to India or the armed forces where it fits.", "Close with a conclusion. Do not trail off."]}
-        startLabel="Deal me four topics" onStart={deal}
+        startLabel="Deal me four topics" onStart={deal} loading={dealing} note={dealError || undefined}
       />
     );
 
@@ -145,7 +150,7 @@ export default function LecturettePage() {
             </button>
           ))}
         </div>
-        <button onClick={deal} className="mt-6 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground">Deal four new topics</button>
+        <button onClick={deal} disabled={dealing} className="mt-6 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground">Deal four new topics</button>
       </div>
     );
 

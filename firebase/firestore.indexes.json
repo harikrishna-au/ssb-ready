@@ -1,4 +1,19 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "oir_results",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ranked",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "percentageScore",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }
