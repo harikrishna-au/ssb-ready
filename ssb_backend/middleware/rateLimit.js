@@ -57,4 +57,10 @@ function buildLimiters(now = Date.now) {
   };
 }
 
-module.exports = { createRateLimiter, buildLimiters, byIp, byUser };
+let shared = null;
+/** One set of limiters per process, shared by the IP limiter in app setup and every route guard. */
+function getLimiters() {
+  return (shared ||= buildLimiters());
+}
+
+module.exports = { createRateLimiter, buildLimiters, getLimiters, byIp, byUser };

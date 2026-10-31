@@ -3,6 +3,13 @@ const assert = require('node:assert/strict');
 const h = require('./helpers');
 const { createRateLimiter } = require('../middleware/rateLimit');
 
+// Limits are read from env when limiters are created, so reload the modules that hold them.
+function freshModules() {
+  for (const m of ['../middleware/rateLimit', '../middleware/guard', '../middleware/platform', '../app',
+    '../routes/evaluationRoutes', '../routes/evaluationPipelineRoutes', '../routes/firestoreRoutes', '../routes/imageRoutes',
+    '../routes/interviewRoutes', '../routes/ppdtRoutes', '../routes/tatRoutes', '../routes/accountRoutes']) delete require.cache[require.resolve(m)];
+}
+
 function run(limiter, req) {
   return new Promise((resolve) => {
     const headers = {};
@@ -30,8 +37,7 @@ test('a missing key is not limited (the IP limiter covers unauthenticated caller
 test('AI endpoints: per-user burst limit returns 429 with Retry-After, other users are unaffected', async () => {
   process.env.RATE_LIMIT_AI_PER_5MIN = '3';
   // Limits are read when the app is built, so build a fresh one.
-  delete require.cache[require.resolve('../middleware/platform')];
-  delete require.cache[require.resolve('../app')];
+  freshModules();
   const { createApp } = require('../app');
   const server = await new Promise((r) => { const s = createApp().listen(0, '127.0.0.1', () => r(s)); });
   const call = h.api(`http://127.0.0.1:${server.address().port}`);
@@ -50,8 +56,7 @@ test('AI endpoints: per-user burst limit returns 429 with Retry-After, other use
 
 test('per-IP limit applies before authentication', async () => {
   process.env.RATE_LIMIT_IP_PER_MIN = '4';
-  delete require.cache[require.resolve('../middleware/platform')];
-  delete require.cache[require.resolve('../app')];
+  freshModules();
   const { createApp } = require('../app');
   const server = await new Promise((r) => { const s = createApp().listen(0, '127.0.0.1', () => r(s)); });
   const call = h.api(`http://127.0.0.1:${server.address().port}`);

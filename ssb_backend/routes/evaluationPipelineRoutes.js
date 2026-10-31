@@ -1,9 +1,10 @@
 const express = require('express');
-const { firebaseProtect } = require('../middleware/firebaseAuthMiddleware');
+const { guard, AI } = require('../middleware/guard');
+const schemas = require('../middleware/schemas');
 const { runEvaluationHandler } = require('../controllers/evaluationPipelineController');
 
-const router = express.Router();
+const router = express.Router({ caseSensitive: true });
 
-router.post('/run', firebaseProtect, runEvaluationHandler);
+router.post('/run', ...guard({ schema: schemas.pipelineRun, limits: AI }), runEvaluationHandler);
 
 module.exports = router;

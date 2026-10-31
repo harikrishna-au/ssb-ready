@@ -1,10 +1,11 @@
 const express = require('express');
-const { firebaseProtect } = require('../middleware/firebaseAuthMiddleware');
+const { guard, AI } = require('../middleware/guard');
+const schemas = require('../middleware/schemas');
 const { runPpdtPipeline, extractWrittenPaperText } = require('../controllers/ppdtController');
 
-const router = express.Router();
+const router = express.Router({ caseSensitive: true });
 
-router.post('/ocr', firebaseProtect, extractWrittenPaperText);
-router.post('/pipeline', firebaseProtect, runPpdtPipeline);
+router.post('/ocr', ...guard({ schema: schemas.ocr, limits: AI }), extractWrittenPaperText);
+router.post('/pipeline', ...guard({ schema: schemas.ppdtPipeline, limits: AI }), runPpdtPipeline);
 
 module.exports = router;

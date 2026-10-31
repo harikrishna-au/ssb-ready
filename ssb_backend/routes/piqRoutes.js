@@ -2,7 +2,7 @@ const express = require('express');
 const { protect } = require('../middleware/authMiddleware');
 const { savePiq, getPiq } = require('../controllers/testController');
 
-const router = express.Router();
+const router = express.Router({ caseSensitive: true });
 
 router.post('/', protect, savePiq);
 router.get('/', protect, getPiq);

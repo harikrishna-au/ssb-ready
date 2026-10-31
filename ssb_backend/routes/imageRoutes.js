@@ -1,9 +1,10 @@
 const express = require('express');
-const { firebaseProtect } = require('../middleware/firebaseAuthMiddleware');
+const { guard, AI } = require('../middleware/guard');
+const schemas = require('../middleware/schemas');
 const { asyncHandler } = require('../middleware/asyncHandler');
 const { pickImages } = require('../services/storyImages');
 
-const router = express.Router();
+const router = express.Router({ caseSensitive: true });
 
 /**
  * GET /api/images?test=ppdt|tat&count=1..12
@@ -11,7 +12,7 @@ const router = express.Router();
  */
 router.get(
   '/',
-  firebaseProtect,
+  ...guard({ limits: ['write'] }),
   asyncHandler(async (req, res) => {
     const test = req.query.test === 'tat' ? 'tat' : 'ppdt';
     const count = Math.max(1, Math.min(12, Number.parseInt(req.query.count, 10) || 1));

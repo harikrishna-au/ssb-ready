@@ -1,11 +1,11 @@
 const express = require('express');
-const { firebaseProtect } = require('../middleware/firebaseAuthMiddleware');
+const { guard, AI } = require('../middleware/guard');
+const schemas = require('../middleware/schemas');
 const { exportAccount, deleteAccount } = require('../controllers/accountController');
 
-const router = express.Router();
+const router = express.Router({ caseSensitive: true });
 
-// Body validation and rate limits for these two routes live in middleware/platform.js.
-router.get('/export', firebaseProtect, exportAccount);
-router.delete('/', firebaseProtect, deleteAccount);
+router.get('/export', ...guard({ limits: ['account'] }), exportAccount);
+router.delete('/', ...guard({ schema: schemas.accountDelete, limits: ['account'] }), deleteAccount);
 
 module.exports = router;

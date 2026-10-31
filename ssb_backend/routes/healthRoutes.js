@@ -2,7 +2,7 @@ const express = require('express');
 const { asyncHandler } = require('../middleware/asyncHandler');
 const { runHealthChecks } = require('../services/healthChecks');
 
-const router = express.Router();
+const router = express.Router({ caseSensitive: true });
 
 // Liveness: cheap, used by Render's health check. Does not touch any dependency.
 router.get('/', (_req, res) => {
