@@ -14,6 +14,7 @@ const runTatPipeline = asyncHandler(async (req, res) => {
   const {
     imageId,
     imageUrl,
+    imageToken,
     imageDescription,
     imageIndex,
     storyMode,
@@ -22,7 +23,7 @@ const runTatPipeline = asyncHandler(async (req, res) => {
     perception
   } = req.body;
 
-  const image = await resolveImage({ imageId, imageUrl });
+  const image = await resolveImage({ imageId, imageUrl, imageToken, userId });
   const desc = (imageDescription || '').trim();
   if (!image && !desc) {
     throw badRequest('imageId (or imageDescription) is required');
@@ -63,7 +64,7 @@ const runTatPipeline = asyncHandler(async (req, res) => {
   const docData = {
     userId,
     imageId: image?.id || '',
-    imageUrl: image?.url || '',
+    imageUrl: '', // signed URLs expire; the id is enough to rebuild one
     imageDescription: desc,
     imageIndex: idx,
     storyMode: storyMode || 'typing',

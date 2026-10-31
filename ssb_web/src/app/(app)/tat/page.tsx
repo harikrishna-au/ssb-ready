@@ -36,7 +36,7 @@ export default function TatPage() {
       pending.current.push(
         api
           .post<Eval>("/api/tat/pipeline", {
-            imageId: cardsRef.current[i].id, imageIndex: i, storyMode: "typing", storyText: text, perception: {},
+            imageId: cardsRef.current[i].id, imageToken: cardsRef.current[i].token, imageIndex: i, storyMode: "typing", storyText: text, perception: {},
           })
           .then((r) => setResults((p) => { const n = [...p]; n[i] = r; return n; }))
           .catch((e) => setResults((p) => { const n = [...p]; n[i] = String(e?.message ?? e); return n; })),
