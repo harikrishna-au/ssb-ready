@@ -15,13 +15,22 @@ export const metadata: Metadata = {
   title: { default: "ReadyKadet — Practice the SSB with instant AI feedback", template: "%s · ReadyKadet" },
   description:
     "Clear the SSB screening round and fix your TAT, WAT, SRT and SDT. Timed practice with AI feedback, lecturette practice and an interview guide for NDA, CDS, AFCAT and CAPF aspirants.",
-  icons: { icon: "/logo.png", apple: "/logo.png" },
+  icons: {
+    icon: [
+      { url: "/brand/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  alternates: { canonical: "/" },
+  twitter: { card: "summary_large_image", title: "ReadyKadet — Practice the SSB with instant AI feedback", description: "Timed psychology tests and an AI mock interview, scored against Officer Like Qualities." },
   openGraph: {
     type: "website",
     siteName: "ReadyKadet",
     title: "ReadyKadet — Practice the SSB with instant AI feedback",
     description: "Timed psychology tests and an AI mock interview, scored against Officer Like Qualities.",
-    images: ["/logo.png"],
+    images: [{ url: "/og-default.png", width: 1200, height: 630, alt: "ReadyKadet: timed SSB practice" }],
   },
 };
 
