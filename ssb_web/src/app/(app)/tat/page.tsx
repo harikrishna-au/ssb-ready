@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { fetchPictures, type Alignment, type Picture } from "@/lib/images";
 import { useCountdown, useLatest } from "@/lib/use-countdown";
 import { useLeaveGuard } from "@/lib/use-leave-guard";
+import { usePremium } from "@/lib/use-premium";
 
 type Eval = { analysisMarkdown: string; score: number; alignment: Alignment | null };
 const CARDS = 12;
@@ -16,6 +17,7 @@ const VIEW = 30;
 const WRITE = 240;
 
 export default function TatPage() {
+  const access = usePremium();
   const [cards, setCards] = useState<Picture[]>([]);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
@@ -81,7 +83,7 @@ export default function TatPage() {
         blurb="Pictures, one at a time. For each, you write a story. The stories are read together, so your habits as a writer show up across all of them."
         facts={[["Pictures", "5–12"], ["Look", "30s"], ["Write", "4 min each"], ["Scored on", "OLQs"]]}
         steps={["A picture is shown for 30 seconds.", "It disappears and you write a story in 4 minutes.", "Move on, or the next picture arrives when time ends.", "After the last one, each story is scored."]}
-        tips={["Use situation, problem, action, outcome for every story.", "Show qualities through what the hero does. Do not list them.", "Avoid revenge, luck and giving up as endings.", "Free accounts get 5 pictures per set; Lifetime access unlocks up to 12."]}
+        tips={["Use situation, problem, action, outcome for every story.", "Show qualities through what the hero does. Do not list them.", "Avoid revenge, luck and giving up as endings.", ...(access.loading ? [] : [access.premium ? "You have Lifetime access, so your pictures come from the full bank." : "Free accounts get 5 pictures per set; Lifetime access unlocks the full bank."])]}
         onStart={start} loading={starting}
       />
     );

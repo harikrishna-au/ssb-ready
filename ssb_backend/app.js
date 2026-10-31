@@ -12,11 +12,15 @@ const tatRoutes = require('./routes/tatRoutes');
 const evaluationPipelineRoutes = require('./routes/evaluationPipelineRoutes');
 const legalRoutes = require('./routes/legalRoutes');
 const accountRoutes = require('./routes/accountRoutes');
+const paymentsRoutes = require('./routes/paymentsRoutes');
+const meRoutes = require('./routes/meRoutes');
 
 function createApp() {
   const app = express();
 
-  // Security headers, CORS allow-list, body limits, rate limits, auth + validation policy, request ids and logs.
+  // Razorpay webhook first: its signature covers the raw request bytes, so it must run before any JSON parser.
+  app.use('/api/payments/webhook', paymentsRoutes.webhook);
+  // Security headers, CORS allow-list, body limits, rate limits, request ids and logs.
   applyPlatform(app);
 
   app.get('/', (req, res) => {
@@ -49,6 +53,8 @@ function createApp() {
   app.use('/api/interview', interviewRoutes);
   app.use('/api/images', imageRoutes);
   app.use('/api/account', accountRoutes);
+  app.use('/api/payments', paymentsRoutes);
+  app.use('/api/me', meRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
