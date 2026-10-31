@@ -1,13 +1,23 @@
 import { Show, UserButton } from "@clerk/nextjs";
-import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { MobileMenu } from "./mobile-menu";
 
+/** ReadyKadet mark: two stacked chevrons on a blue tile. Source of truth: public/brand/mark.svg */
+export function LogoMark({ className = "size-8" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 128 128" className={className} aria-hidden="true" focusable="false">
+      <rect width="128" height="128" rx="28" fill="#4b7bf5" />
+      <path d="M26 64 L64 34 L102 64" fill="none" stroke="#f5a623" strokeWidth="13" />
+      <path d="M26 94 L64 64 L102 94" fill="none" stroke="#fff" strokeWidth="13" />
+    </svg>
+  );
+}
+
 export function Logo({ className = "" }: { className?: string }) {
   return (
     <Link href="/" className={`flex items-center gap-2.5 ${className}`}>
-      <Image src="/logo.png" alt="" width={32} height={32} className="rounded-lg" />
+      <LogoMark className="size-8" />
       <span className="font-display text-2xl font-black uppercase tracking-wide">ReadyKadet</span>
     </Link>
   );
