@@ -23,6 +23,7 @@ const resultBase = {
   evaluation: z.record(str(100), z.unknown()).optional().refine((o) => !o || JSON.stringify(o).length < 20000, 'evaluation too large')
 };
 
+const paymentVerify = z.object({ razorpay_order_id: str(100), razorpay_payment_id: str(100), razorpay_signature: str(200) });
 const oirResult = z.object({ ...resultBase, totalQuestions: z.number().int().min(0).max(500).optional(), percentageScore: score.optional() });
 const storyResult = z.object({
   ...resultBase,
@@ -85,6 +86,6 @@ const ocr = z.object({ imageBase64: str(12_000_000).min(1), mimeType: str(60).op
 const accountDelete = z.object({ confirm: z.literal('DELETE') });
 
 module.exports = {
-  oirResult, storyResult, responsesResult, piq, userProfile, userType,
+  paymentVerify, oirResult, storyResult, responsesResult, piq, userProfile, userType,
   evalPpdt, evalResponses, evalTat, interviewReply, pipelineRun, ppdtPipeline, tatPipeline, ocr, accountDelete
 };

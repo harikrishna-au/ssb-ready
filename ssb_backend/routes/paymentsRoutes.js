@@ -1,21 +1,21 @@
 const express = require('express');
-const { firebaseProtect } = require('../middleware/firebaseAuthMiddleware');
+const { guard } = require('../middleware/guard');
+const schemas = require('../middleware/schemas');
 const { asyncHandler } = require('../middleware/asyncHandler');
 const payments = require('../services/payments');
 const { getEntitlement } = require('../services/premium');
 
 /** Authenticated routes, mounted at /api/payments. */
 const router = express.Router();
-router.use(firebaseProtect);
 
 // POST /api/payments/order  (body is ignored: the amount and plan are fixed on the server)
-router.post('/order', asyncHandler(async (req, res) => {
+router.post('/order', ...guard({ limits: ['write'] }), asyncHandler(async (req, res) => {
   const out = await payments.createOrder({ userId: req.firebaseUser.uid, email: req.firebaseUser.email || '' });
   res.json({ success: true, ...out });
 }));
 
 // POST /api/payments/verify  { razorpay_order_id, razorpay_payment_id, razorpay_signature }
-router.post('/verify', asyncHandler(async (req, res) => {
+router.post('/verify', ...guard({ schema: schemas.paymentVerify, limits: ['write'] }), asyncHandler(async (req, res) => {
   const b = req.body || {};
   const out = await payments.verifyPayment({
     userId: req.firebaseUser.uid, orderId: b.razorpay_order_id, paymentId: b.razorpay_payment_id, signature: b.razorpay_signature
@@ -24,12 +24,12 @@ router.post('/verify', asyncHandler(async (req, res) => {
 }));
 
 // GET /api/payments/order/:orderId  (poll after a redirect, in case the webhook finished first)
-router.get('/order/:orderId', asyncHandler(async (req, res) => {
+router.get('/order/:orderId', ...guard({ limits: ['write'] }), asyncHandler(async (req, res) => {
   res.json({ success: true, ...(await payments.orderStatus({ userId: req.firebaseUser.uid, orderId: req.params.orderId })) });
 }));
 
 // GET /api/payments/history  -> payment history and receipt details for /billing
-router.get('/history', asyncHandler(async (req, res) => {
+router.get('/history', ...guard({ limits: ['write'] }), asyncHandler(async (req, res) => {
   const [items, ent] = await Promise.all([payments.listPayments(req.firebaseUser.uid), getEntitlement(req.firebaseUser.uid)]);
   res.json({ success: true, premium: ent.premium, items });
 }));

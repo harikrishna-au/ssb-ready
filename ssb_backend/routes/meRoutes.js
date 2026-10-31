@@ -1,5 +1,5 @@
 const express = require('express');
-const { firebaseProtect } = require('../middleware/firebaseAuthMiddleware');
+const { guard } = require('../middleware/guard');
 const { asyncHandler } = require('../middleware/asyncHandler');
 const { getEntitlement } = require('../services/premium');
 const { linkByVerifiedEmail } = require('../services/identity');
@@ -8,11 +8,11 @@ const payments = require('../services/payments');
 const { logger } = require('../utils/logger');
 
 const router = express.Router();
-router.use(firebaseProtect);
 
 /** GET /api/me -> the one trustworthy answer to "is this user premium?" */
 router.get(
   '/',
+  ...guard({ limits: ['write'] }),
   asyncHandler(async (req, res) => {
     const userId = req.firebaseUser.uid;
     const [ent, piq] = await Promise.all([
@@ -32,6 +32,7 @@ router.get(
 /** POST /api/me/link-identity -> links this login to the other one that has the same verified email. */
 router.post(
   '/link-identity',
+  ...guard({ limits: ['account'] }),
   asyncHandler(async (req, res) => {
     const result = await linkByVerifiedEmail(req.firebaseUser.uid);
     const ent = await getEntitlement(req.firebaseUser.uid, { fresh: true });

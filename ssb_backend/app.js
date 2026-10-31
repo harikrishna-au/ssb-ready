@@ -18,6 +18,9 @@ const meRoutes = require('./routes/meRoutes');
 function createApp() {
   const app = express();
 
+  // Must be set before the first route is mounted: Express reads these once, when its router is created.
+  app.set('case sensitive routing', true);
+  app.set('strict routing', false);
   // Razorpay webhook first: its signature covers the raw request bytes, so it must run before any JSON parser.
   app.use('/api/payments/webhook', paymentsRoutes.webhook);
   // Security headers, CORS allow-list, body limits, rate limits, request ids and logs.

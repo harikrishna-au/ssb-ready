@@ -22,7 +22,8 @@ function listRoutes(stack, prefix = '') {
   return out;
 }
 
-const PUBLIC = [/^\/api\/health/];
+// The Razorpay webhook has no user session by design: it is authenticated by its HMAC signature.
+const PUBLIC = [/^\/api\/health/, /^\/api\/payments\/webhook/];
 
 test('FAIL CLOSED: every route under /api is guarded unless explicitly public', () => {
   const routes = listRoutes(createApp()._router.stack).filter((r) => r.path.startsWith('/api'));
