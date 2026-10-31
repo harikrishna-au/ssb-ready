@@ -4,6 +4,7 @@ const { config, getCorsOriginOption } = require('./config');
 const { requestContext } = require('./middleware/requestContext');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 const interviewRoutes = require('./routes/interviewRoutes');
+const imageRoutes = require('./routes/imageRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const evaluationRoutes = require('./routes/evaluationRoutes');
 const firestoreRoutes = require('./routes/firestoreRoutes');
@@ -53,6 +54,7 @@ function createApp() {
   app.use('/api/ppdt', ppdtRoutes);
   app.use('/api/tat', tatRoutes);
   app.use('/api/interview', interviewRoutes);
+  app.use('/api/images', imageRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

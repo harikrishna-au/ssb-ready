@@ -1,6 +1,7 @@
 const { asyncHandler } = require('../middleware/asyncHandler');
 const { db } = require('../config/firebase');
 const { evaluatePpdtPipeline, ocrHandwrittenImage } = require('../services/aiService');
+const { resolveImage } = require('../services/storyImages');
 
 function badRequest(message) {
   const err = new Error(message);
@@ -23,7 +24,7 @@ const extractWrittenPaperText = asyncHandler(async (req, res) => {
 
 const runPpdtPipeline = asyncHandler(async (req, res) => {
   const userId = req.firebaseUser.uid;
-  const { imageUrl, storyMode, storyText, handwrittenText, perception } = req.body;
+  const { imageId, imageUrl, storyMode, storyText, handwrittenText, perception } = req.body;
 
   const finalStory = (storyText || handwrittenText || '').trim();
   if (!finalStory) {
@@ -46,18 +47,23 @@ const runPpdtPipeline = asyncHandler(async (req, res) => {
     };
   });
 
+  const image = await resolveImage({ imageId, imageUrl });
+
   const ai = await evaluatePpdtPipeline({
     storyText: finalStory,
     perception: perception || {},
-    topStories
+    topStories,
+    image
   });
 
   const docData = {
     userId,
-    imageUrl: imageUrl || '',
+    imageId: image?.id || '',
+    imageUrl: image?.url || '',
     storyMode: storyMode || 'typing',
     userStory: finalStory,
     aiFeedback: ai.analysisMarkdown,
+    identifiedOlqs: ai.olqs || [],
     score: Number(ai.score || 0),
     completedAt: new Date(),
     perception: perception || {}
@@ -95,6 +101,8 @@ const runPpdtPipeline = asyncHandler(async (req, res) => {
     success: true,
     analysisMarkdown: ai.analysisMarkdown,
     score: ai.score,
+    alignment: ai.alignment,
+    image: image ? { id: image.id, url: image.url } : null,
     leaderboard
   });
 });

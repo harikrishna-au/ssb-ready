@@ -18,6 +18,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@clerk/backend": "^3.26.4",
     "@supabase/supabase-js": "^2.49.8",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

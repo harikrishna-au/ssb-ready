@@ -1,5 +1,5 @@
 const { db } = require('../config/firebase');
-const { evaluateWat, evaluateSrt, generateInterviewReply } = require('./aiService');
+const { evaluateWat, evaluateSrt, evaluateSdt, generateInterviewReply } = require('./aiService');
 
 /**
  * Markdown aligned with app `WatEvaluationModel` / `SrtEvaluationModel` `toMarkdown()`.
@@ -71,6 +71,24 @@ async function runEvaluationPipeline(userId, testType, payload) {
         score: evaluation.score,
         leaderboard,
         persistedId: ref.id
+      };
+    }
+
+    case 'SDT': {
+      const responses = payload.responses;
+      if (!responses || typeof responses !== 'object' || Array.isArray(responses)) {
+        const err = new Error('payload.responses must be a non-array object');
+        err.statusCode = 400;
+        throw err;
+      }
+      const { analysis } = await evaluateSdt(responses);
+      return {
+        testType: 'SDT',
+        analysis,
+        feedbackMarkdown: analysis,
+        score: null,
+        leaderboard: null,
+        persistedId: null
       };
     }
 

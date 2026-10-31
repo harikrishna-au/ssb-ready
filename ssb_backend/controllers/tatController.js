@@ -1,6 +1,7 @@
 const { asyncHandler } = require('../middleware/asyncHandler');
 const { db } = require('../config/firebase');
 const { evaluateTatPipeline } = require('../services/aiService');
+const { resolveImage } = require('../services/storyImages');
 
 function badRequest(message) {
   const err = new Error(message);
@@ -11,6 +12,8 @@ function badRequest(message) {
 const runTatPipeline = asyncHandler(async (req, res) => {
   const userId = req.firebaseUser.uid;
   const {
+    imageId,
+    imageUrl,
     imageDescription,
     imageIndex,
     storyMode,
@@ -19,9 +22,10 @@ const runTatPipeline = asyncHandler(async (req, res) => {
     perception
   } = req.body;
 
+  const image = await resolveImage({ imageId, imageUrl });
   const desc = (imageDescription || '').trim();
-  if (!desc) {
-    throw badRequest('imageDescription is required');
+  if (!image && !desc) {
+    throw badRequest('imageId (or imageDescription) is required');
   }
 
   const finalStory = (storyText || handwrittenText || '').trim();
@@ -52,16 +56,20 @@ const runTatPipeline = asyncHandler(async (req, res) => {
     imageDescription: desc,
     imageIndex: idx,
     perception: perception || {},
-    topStories
+    topStories,
+    image
   });
 
   const docData = {
     userId,
+    imageId: image?.id || '',
+    imageUrl: image?.url || '',
     imageDescription: desc,
     imageIndex: idx,
     storyMode: storyMode || 'typing',
     userStory: finalStory,
     aiFeedback: ai.analysisMarkdown,
+    identifiedOlqs: ai.olqs || [],
     score: Number(ai.score || 0),
     completedAt: new Date(),
     perception: perception || {}
@@ -99,6 +107,8 @@ const runTatPipeline = asyncHandler(async (req, res) => {
     success: true,
     analysisMarkdown: ai.analysisMarkdown,
     score: ai.score,
+    alignment: ai.alignment,
+    image: image ? { id: image.id, url: image.url } : null,
     leaderboard
   });
 });
