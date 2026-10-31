@@ -18,7 +18,7 @@ cmd="${1:-help}"
 cd "$ROOT"
 
 setup() {
-  if [ -n "$(git status --porcelain | grep -v '^?? .claude' || true)" ]; then
+  if [ -n "$(git status --porcelain | grep -vE '^\?\? (\.claude|supabase/\.temp)/' || true)" ]; then
     cat <<MSG
 Your working tree has uncommitted changes. Worktrees are created from COMMITTED code, so the agents
 would start without your latest work (ssb_web is currently untracked!).
