@@ -14,7 +14,7 @@ function countingMailer() {
 async function world() {
   const store = memoryStore();
   await store.saveNotification(published);
-  await store.savePrefs({ userId: 'u1', email: 'u1@example.com' });
+  await store.savePrefs({ userId: 'u1', email: 'u1@example.com', emailConfirmedFor: 'u1@example.com' });
   await store.upsertTracked({ userId: 'u1', notificationId: 'nda-1-2027', status: 'saved', updatedAt: 'x' });
   return { store, mailer: countingMailer() };
 }
@@ -63,7 +63,17 @@ test('no reminder once the user has applied, unsubscribed, or has no email', asy
   ({ store, mailer } = await world());
   await store.savePrefs({ userId: 'u1', email: '' });
   const r = await rem.runDailyReminders({ store, mailer, nowMs: NOW });
-  assert.equal(r.skipped, 1);
+  assert.equal(r.considered, 0);
+  assert.equal(mailer.sent.length, 0);
+
+  // address stored but never confirmed (double opt-in): nothing is sent
+  ({ store, mailer } = await world());
+  await store.savePrefs({ userId: 'u1', emailConfirmedFor: '' });
+  await rem.runDailyReminders({ store, mailer, nowMs: NOW });
+  assert.equal(mailer.sent.length, 0);
+  // the confirmed address changes: needs a fresh confirmation
+  await store.savePrefs({ userId: 'u1', emailConfirmedFor: 'u1@example.com', email: 'new@example.com' });
+  await rem.runDailyReminders({ store, mailer, nowMs: NOW });
   assert.equal(mailer.sent.length, 0);
 });
 

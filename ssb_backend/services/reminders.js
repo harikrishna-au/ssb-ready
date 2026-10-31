@@ -10,6 +10,8 @@ const core = require('./radarCore');
 const SITE = () => (process.env.RADAR_SITE_URL || 'https://readykadet.com').replace(/\/$/, '');
 const API = () => (process.env.PUBLIC_URL || process.env.BACKEND_PUBLIC_URL || '').replace(/\/$/, '');
 const unsubUrl = (p) => `${API()}/api/radar/unsubscribe?token=${encodeURIComponent(p.unsubscribeToken)}`;
+/** Mail only goes to an address the user proved is theirs (verified account email + clicked our confirmation link). */
+const canMail = (p) => !!(p && p.remindersEnabled && p.email && p.emailConfirmedFor === p.email);
 const fmt = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 const when = (d) => (d === 1 ? 'tomorrow' : `in ${d} days`);
 
@@ -56,6 +58,27 @@ async function deliver({ store, mailer, nowIso }, { key, userId, p, kind, mail }
   }
 }
 
+const confirmUrl = (p) => `${API()}/api/radar/confirm?token=${encodeURIComponent(p.confirmToken)}`;
+/** Asks the user to confirm the address before any reminder is sent. At most one per address per day. */
+async function sendConfirmation({ store, mailer, nowMs }, p) {
+  const today = core.istToday(nowMs);
+  const mail = {
+    subject: 'Confirm your Radar reminder emails',
+    body: `Someone (hopefully you) asked for ReadyKadet Radar deadline reminders at this address.\n\nTo turn them on, confirm here: ${confirmUrl(p)}\n\nIf this was not you, ignore this email and nothing will be sent.\nStop these emails: ${unsubUrl(p)}`,
+  };
+  const key = `confirm:${today}:${p.userId}:${p.email}`;
+  const row = await store.insertOutbox({ dedupeKey: key, userId: p.userId, toEmail: p.email, kind: 'confirm', subject: mail.subject, body: mail.body, createdAt: new Date(nowMs).toISOString() });
+  if (!row) return 'duplicate';
+  try {
+    const r = await mailer.send({ to: p.email, subject: mail.subject, text: mail.body, unsubscribeUrl: unsubUrl(p) });
+    await store.updateOutbox(key, { status: r.dryRun ? 'dry_run' : 'sent', sentAt: new Date(nowMs).toISOString() });
+    return r.dryRun ? 'dry_run' : 'sent';
+  } catch (e) {
+    await store.updateOutbox(key, { status: 'failed', error: String(e.message).slice(0, 300) });
+    return 'failed';
+  }
+}
+
 /** Daily job. `nowMs` injected so windows are testable. */
 async function runDailyReminders({ store, mailer, nowMs }) {
   const nowIso = new Date(nowMs).toISOString();
@@ -76,7 +99,7 @@ async function runDailyReminders({ store, mailer, nowMs }) {
     const offset = core.dueOffset(n.lastDate, today);
     if (!offset) continue;
     const p = await prefsFor(t.userId);
-    if (!p || !p.remindersEnabled) continue;
+    if (!canMail(p)) continue;
     out.considered += 1;
     if (p.digest) {
       if (!digests.has(t.userId)) digests.set(t.userId, []);
@@ -100,7 +123,7 @@ async function notifyChange({ store, mailer, nowMs }, n, changes) {
   if (!material) return out; // typo fixes in the title/body do not email anyone
   for (const t of await store.listTrackedFor(n.id)) {
     const p = await store.getPrefs(t.userId);
-    if (!p || !p.remindersEnabled) continue;
+    if (!canMail(p)) continue;
     const r = await deliver({ store, mailer, nowIso }, { key: core.changeKey(n, t.userId), userId: t.userId, p, kind: 'change', mail: changeMail(n, changes, p) });
     out[r] += 1;
   }
@@ -131,4 +154,4 @@ function createMailer(env = process.env, fetchImpl = globalThis.fetch) {
   };
 }
 
-module.exports = { runDailyReminders, notifyChange, createMailer, deadlineMail, changeMail, digestMail };
+module.exports = { sendConfirmation, canMail, runDailyReminders, notifyChange, createMailer, deadlineMail, changeMail, digestMail };

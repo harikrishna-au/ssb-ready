@@ -165,7 +165,7 @@ const fromRow = (r) => ({
 /** What the public API returns. Strips the admin id. */
 const toPublic = (n) => {
   const { verifiedBy, status, createdAt, ...rest } = n; // eslint-disable-line no-unused-vars
-  return { ...rest, note: n.body };
+  return { ...rest, note: n.body, googleCalendarUrl: googleCalendarUrl(n) };
 };
 
 module.exports = {

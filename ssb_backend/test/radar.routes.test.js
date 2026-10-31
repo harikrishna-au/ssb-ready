@@ -10,15 +10,18 @@ async function boot() {
   const mailer = { sent: [], live: false, async send(m) { this.sent.push(m); return { dryRun: true }; } };
   process.env.CRON_SECRET = 'test-secret';
   // Test auth: "Bearer user:<uid>" -> that uid. No real tokens involved.
+  // Users named fb_ok / fb_unverified behave like Firebase tokens; cl_* like Clerk tokens (no email_verified claim).
   const auth = (req, _res, next) => {
     const m = /^Bearer user:(\w+)$/.exec(req.headers.authorization || '');
     if (!m) return next(Object.assign(new Error('no token'), { statusCode: 401 }));
-    req.firebaseUser = { uid: m[1], email: `${m[1]}@example.com` };
+    const uid = m[1];
+    req.firebaseUser = { uid, email: `${uid}@example.com`, ...(uid.startsWith('fb_ok') ? { email_verified: true } : uid.startsWith('fb_') ? { email_verified: false } : {}) };
     next();
   };
+  const clerkVerified = new Set(['u1', 'cl_verified']);
   const app = express();
   app.use(express.json());
-  app.use('/api/radar', createRadarRouter({ getStore: () => store, auth, isAdmin: async (u) => u === 'admin', mailer, nowMs: () => Date.UTC(2026, 11, 15, 4, 0), emailOf: async () => '' }));
+  app.use('/api/radar', createRadarRouter({ getStore: () => store, auth, isAdmin: async (u) => u === 'admin', mailer, nowMs: () => Date.UTC(2026, 11, 15, 4, 0), emailOf: async (u) => (clerkVerified.has(u) ? `${u}@example.com` : '') }));
   app.use(errorHandler);
   const server = await new Promise((r) => { const s = app.listen(0, () => r(s)); });
   const base = `http://127.0.0.1:${server.address().port}/api/radar`;
@@ -60,9 +63,23 @@ test('end to end over HTTP: admin workflow, public read, tracker, reminders, uns
   const imp = await call('POST', '/tracker/import', 'u2', { apps: { [id]: { status: 'applied', updatedAt: '2026-10-01T00:00:00Z' } } });
   assert.equal(imp.json.imported, 1);
 
-  // prefs take the email from the verified token, not the body
+  // prefs take the email from the verified account, not the body; reminders need the emailed confirmation
   const pr = await call('PUT', '/prefs', 'u1', { remindersEnabled: true, email: 'attacker@example.com' });
   assert.equal(pr.json.prefs.hasEmail, true);
+  assert.equal(pr.json.prefs.confirmed, false);
+  assert.equal(pr.json.confirmationSent, true);
+  assert.equal(mailer.sent.length, 1);
+  assert.equal(mailer.sent[0].to, 'u1@example.com');
+  assert.match(mailer.sent[0].subject, /Confirm/);
+  assert.equal((await call('POST', '/cron/reminders', null, null, { 'x-cron-secret': 'test-secret' })).json.considered, 0); // not confirmed yet
+  const ctok = /token=([^\s&]+)/.exec(mailer.sent[0].text)[1];
+  assert.equal((await call('GET', `/confirm?token=${ctok}`)).status, 200);
+  assert.equal((await call('GET', '/prefs', 'u1')).json.prefs.confirmed, false); // GET alone does not confirm
+  assert.equal((await call('POST', '/confirm?token=wrong')).status, 404);
+  assert.equal((await call('POST', `/confirm?token=${ctok}`)).status, 200);
+  assert.equal((await call('GET', '/prefs', 'u1')).json.prefs.confirmed, true);
+  assert.equal((await call('POST', `/confirm?token=${ctok}`)).status, 404); // single use
+  mailer.sent.length = 0;
 
   assert.equal((await call('POST', '/cron/reminders')).status, 401);
   assert.equal((await call('POST', '/cron/reminders', null, null, { 'x-cron-secret': 'nope' })).status, 401);
@@ -72,6 +89,7 @@ test('end to end over HTTP: admin workflow, public read, tracker, reminders, uns
   assert.equal(run2.json.duplicate, 1);
   assert.equal(mailer.sent.length, 1);
   assert.equal(mailer.sent[0].to, 'u1@example.com');
+  assert.match(mailer.sent[0].subject, /last date/);
 
   const tok = /token=([^\s&]+)/.exec(mailer.sent[0].unsubscribeUrl)[1];
   assert.equal((await call('GET', `/unsubscribe?token=${tok}`)).status, 200);
@@ -95,4 +113,39 @@ test('cron endpoints are closed when CRON_SECRET is unset', async (t) => {
   t.after(close);
   delete process.env.CRON_SECRET;
   assert.equal((await call('POST', '/cron/watch', null, null, { 'x-cron-secret': '' })).status, 401);
+});
+
+test('reminder email addresses: only verified ones are accepted', async (t) => {
+  const { call, store, mailer, close } = await boot();
+  t.after(close);
+  const on = { remindersEnabled: true };
+
+  // Firebase, email not verified
+  let r = await call('PUT', '/prefs', 'fb_unverified', on);
+  assert.equal(r.status, 422);
+  assert.equal(r.json.needsVerifiedEmail, true);
+  assert.equal((await store.getPrefs('fb_unverified')).email || '', '');
+  // Clerk, primary not verified
+  r = await call('PUT', '/prefs', 'cl_unverified', { ...on, email: 'victim@example.com' });
+  assert.equal(r.status, 422);
+  assert.equal((await store.getPrefs('cl_unverified')).email || '', '');
+  // Firebase, verified
+  r = await call('PUT', '/prefs', 'fb_ok1', on);
+  assert.equal(r.status, 200);
+  assert.equal(r.json.prefs.hasEmail, true);
+  assert.equal(r.json.prefs.confirmed, false);
+  // Clerk, verified primary
+  r = await call('PUT', '/prefs', 'cl_verified', on);
+  assert.equal(r.status, 200);
+  assert.equal(r.json.confirmationSent, true);
+  // no email at all (token without email, nothing from Clerk)
+  r = await call('PUT', '/prefs', 'nobody', on);
+  assert.equal(r.status, 422);
+  assert.match(r.json.error.message, /Verify your email/);
+  // only verified users were mailed, and only a confirmation (never a reminder)
+  assert.deepEqual(mailer.sent.map((m) => m.to).sort(), ['cl_verified@example.com', 'fb_ok1@example.com']);
+  assert.ok(mailer.sent.every((m) => /Confirm/.test(m.subject)));
+  // turning reminders off never needs an address
+  r = await call('PUT', '/prefs', 'nobody', { remindersEnabled: false });
+  assert.equal(r.status, 200);
 });

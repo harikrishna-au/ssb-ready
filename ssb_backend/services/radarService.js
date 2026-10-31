@@ -130,8 +130,22 @@ function createRadarService({ store, now = () => new Date().toISOString(), onCha
       const patch = { userId };
       if (typeof p.remindersEnabled === 'boolean') patch.remindersEnabled = p.remindersEnabled;
       if (typeof p.digest === 'boolean') patch.digest = p.digest;
-      if (typeof p.email === 'string') patch.email = p.email.trim() || undefined;
+      if (typeof p.email === 'string') {
+        const email = p.email.trim();
+        const cur = await store.getPrefs(userId);
+        patch.email = email;
+        // A different address than the confirmed one needs a fresh confirmation.
+        if (email && cur?.emailConfirmedFor !== email) patch.confirmToken = require('./radarStore').token();
+        if (!email) patch.confirmToken = '';
+      }
       return store.savePrefs(patch);
+    },
+    /** Double opt-in: only the holder of the emailed token confirms the address. */
+    async confirmEmail(tok) {
+      const p = tok ? await store.getPrefsByConfirmToken(tok) : null;
+      if (!p || !p.email) return false;
+      await store.savePrefs({ userId: p.userId, emailConfirmedFor: p.email, confirmToken: '', remindersEnabled: true });
+      return true;
     },
     async unsubscribe(tok) {
       const p = tok ? await store.getPrefsByToken(tok) : null;

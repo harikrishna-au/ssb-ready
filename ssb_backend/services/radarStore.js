@@ -62,6 +62,7 @@ function memoryStore() {
       return clone(row);
     },
     async getPrefsByToken(t) { return clone([...prefs.values()].find((p) => p.unsubscribeToken === t)) ?? null; },
+    async getPrefsByConfirmToken(t) { return clone([...prefs.values()].find((p) => p.confirmToken && p.confirmToken === t)) ?? null; },
 
     /** Returns true only for the call that created the row. The unique key is the idempotency guard. */
     async insertOutbox(o) {
@@ -79,7 +80,7 @@ function supabaseStore(client) {
   const must = ({ data, error }) => { if (error) throw new Error(`radar store: ${error.message}`); return data; };
   const t = (n) => client.from(n);
   const trackedFrom = (r) => ({ userId: r.user_id, notificationId: r.notification_id, status: r.status, note: r.note ?? undefined, createdAt: r.created_at, updatedAt: r.updated_at });
-  const prefsFrom = (r) => r && ({ userId: r.user_id, email: r.email ?? undefined, remindersEnabled: r.reminders_enabled, digest: r.digest, unsubscribeToken: r.unsubscribe_token, timezone: r.timezone, trackerMigratedAt: r.tracker_migrated_at ?? undefined });
+  const prefsFrom = (r) => r && ({ userId: r.user_id, email: r.email ?? undefined, remindersEnabled: r.reminders_enabled, digest: r.digest, unsubscribeToken: r.unsubscribe_token, timezone: r.timezone, emailConfirmedFor: r.email_confirmed_for ?? undefined, confirmToken: r.confirm_token ?? undefined, trackerMigratedAt: r.tracker_migrated_at ?? undefined });
   const reviewFrom = (r) => ({ id: r.id, sourceUrl: r.source_url, label: r.label, notificationId: r.notification_id ?? undefined, diff: r.diff, status: r.status, createdAt: r.created_at });
 
   return {
@@ -128,10 +129,11 @@ function supabaseStore(client) {
     async savePrefs(p) {
       const cur = await this.getPrefs(p.userId);
       const m = { ...(cur ?? { remindersEnabled: true, digest: false, unsubscribeToken: token(), timezone: 'Asia/Kolkata' }), ...p };
-      const row = { user_id: m.userId, email: m.email ?? null, reminders_enabled: m.remindersEnabled, digest: m.digest, unsubscribe_token: m.unsubscribeToken, timezone: m.timezone, tracker_migrated_at: m.trackerMigratedAt ?? null, updated_at: new Date().toISOString() };
+      const row = { user_id: m.userId, email: m.email ?? null, reminders_enabled: m.remindersEnabled, digest: m.digest, unsubscribe_token: m.unsubscribeToken, timezone: m.timezone, email_confirmed_for: m.emailConfirmedFor ?? null, confirm_token: m.confirmToken || null, tracker_migrated_at: m.trackerMigratedAt ?? null, updated_at: new Date().toISOString() };
       return prefsFrom(must(await t('radar_prefs').upsert(row).select().single()));
     },
     async getPrefsByToken(tok) { return prefsFrom(must(await t('radar_prefs').select('*').eq('unsubscribe_token', tok).maybeSingle())); },
+    async getPrefsByConfirmToken(tok) { return prefsFrom(must(await t('radar_prefs').select('*').eq('confirm_token', tok).maybeSingle())); },
 
     async insertOutbox(o) {
       const { data, error } = await t('radar_outbox').insert({ dedupe_key: o.dedupeKey, user_id: o.userId, to_email: o.toEmail ?? null, kind: o.kind, subject: o.subject, body: o.body, created_at: o.createdAt }).select().single();

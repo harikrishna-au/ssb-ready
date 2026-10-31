@@ -81,6 +81,8 @@ create table if not exists public.radar_prefs (
   reminders_enabled boolean not null default true,
   digest boolean not null default false,
   unsubscribe_token text not null unique,
+  email_confirmed_for text,                     -- the address the user confirmed via the emailed link (double opt-in)
+  confirm_token text unique,
   timezone text not null default 'Asia/Kolkata',
   tracker_migrated_at timestamptz,              -- set once the Clerk-metadata tracker has been imported
   updated_at timestamptz not null default now()
@@ -108,6 +110,17 @@ alter table public.tracked_applications enable row level security;
 alter table public.radar_prefs enable row level security;
 alter table public.radar_outbox enable row level security;
 
+-- Access model: the backend (service-role key) serves the public list, so nothing here needs to be open to
+-- the browser. Direct reads are still allowed for published rows, but ONLY on public columns, so internal
+-- fields (verified_by, created_at) and every other table stay private.
+revoke all on public.radar_notifications, public.radar_history, public.radar_sources, public.radar_review_items,
+  public.tracked_applications, public.radar_prefs, public.radar_outbox from anon, authenticated;
+
+grant select (id, title, body, conducted_by, service, exam, opens, last_date, exam_date, confidence,
+  source_url, official_apply_url, apply_label, status, verified_on, version, updated_at)
+  on public.radar_notifications to anon, authenticated;
+
 drop policy if exists radar_public_read on public.radar_notifications;
 create policy radar_public_read on public.radar_notifications for select to anon, authenticated using (status = 'published');
--- No other policies: every other table is reachable only with the service-role key (backend).
+-- No policies on any other table (RLS is on, so anon/authenticated see nothing). Only the service role reads or writes them.
+-- If you add a column to radar_notifications for admin use, do NOT add it to the grant above.
