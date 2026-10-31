@@ -2,7 +2,7 @@ const express = require('express');
 const { config } = require('../config');
 const { buildPrivacyPolicyHtml } = require('../legal/privacyPolicyHtml');
 
-const router = express.Router();
+const router = express.Router({ caseSensitive: true });
 
 const EFFECTIVE_DATE = '26 May 2026';
 

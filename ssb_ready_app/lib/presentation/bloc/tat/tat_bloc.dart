@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:ssb_ready_app/core/data/psychology_image_catalog.dart';
 import 'package:ssb_ready_app/core/services/backend_api_client.dart';
 import 'package:ssb_ready_app/domain/repositories/auth_repository.dart';
 import 'package:ssb_ready_app/domain/repositories/test_history_repository.dart';
@@ -14,20 +15,23 @@ class TatBloc extends Bloc<TatEvent, TatState> {
 
   Timer? _prepTimer;
   Timer? _observationTimer;
+  Timer? _perceptionTimer;
   Timer? _writingTimer;
 
   TatBloc(this._authRepository, this._historyRepository)
       : super(
           TatState(
-            totalImages: TatState.imageDescriptions.length,
+            totalImages: PsychologyImageCatalog.previewImageCount,
           ),
         ) {
     on<BeginTatFlow>(_onBeginTatFlow);
     on<AcceptPictureViewing>(_onAcceptPictureViewing);
     on<SelectStoryMode>(_onSelectStoryMode);
     on<TickPrepTimer>(_onTickPrepTimer);
+    on<SkipPrep>(_onSkipPrep);
     on<StartObservation>(_onStartObservation);
     on<TickObservationTimer>(_onTickObservationTimer);
+    on<TickPerceptionTimer>(_onTickPerceptionTimer);
     on<SubmitPerceptionMeta>(_onSubmitPerceptionMeta);
     on<StartWriting>(_onStartWriting);
     on<TickWritingTimer>(_onTickWritingTimer);
@@ -35,12 +39,19 @@ class TatBloc extends Bloc<TatEvent, TatState> {
     on<StartNextTatPicture>(_onStartNextTatPicture);
   }
 
-  void _onBeginTatFlow(BeginTatFlow event, Emitter<TatState> emit) {
+  Future<void> _onBeginTatFlow(BeginTatFlow event, Emitter<TatState> emit) async {
+    final user = await _authRepository.getCurrentUser();
+    final isPremium = user?.isPremium == true;
+    final cards = PsychologyImageCatalog.buildTatCards(premium: isPremium);
     emit(state.copyWith(
+      currentImageIndex: 0,
+      totalImages: cards.length,
+      cards: cards,
       phase: TatPhase.waitingPictureConsent,
       prepTimeRemaining: 30,
       observationTimeRemaining: 30,
-      writingTimeRemaining: 180,
+      perceptionTimeRemaining: 60,
+      writingTimeRemaining: 240,
       submittedStory: '',
       feedback: null,
       leaderboard: const [],
@@ -77,11 +88,18 @@ class TatBloc extends Bloc<TatEvent, TatState> {
     add(StartObservation());
   }
 
+  void _onSkipPrep(SkipPrep event, Emitter<TatState> emit) {
+    if (state.phase != TatPhase.prep) return;
+    _prepTimer?.cancel();
+    add(StartObservation());
+  }
+
   void _onStartObservation(StartObservation event, Emitter<TatState> emit) {
     emit(state.copyWith(
       phase: TatPhase.observing,
       observationTimeRemaining: 30,
-      writingTimeRemaining: 180,
+      perceptionTimeRemaining: 60,
+      writingTimeRemaining: 240,
       submittedStory: '',
       errorMessage: null,
     ));
@@ -99,11 +117,30 @@ class TatBloc extends Bloc<TatEvent, TatState> {
       ));
     } else {
       _observationTimer?.cancel();
-      emit(state.copyWith(phase: TatPhase.perceptionCapture));
+      emit(state.copyWith(
+        phase: TatPhase.perceptionCapture,
+        perceptionTimeRemaining: 60,
+      ));
+      _perceptionTimer?.cancel();
+      _perceptionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        add(TickPerceptionTimer());
+      });
     }
   }
 
+  void _onTickPerceptionTimer(TickPerceptionTimer event, Emitter<TatState> emit) {
+    if (state.phase != TatPhase.perceptionCapture) return;
+    if (state.perceptionTimeRemaining > 0) {
+      emit(state.copyWith(perceptionTimeRemaining: state.perceptionTimeRemaining - 1));
+      return;
+    }
+    _perceptionTimer?.cancel();
+    emit(state.copyWith(phase: TatPhase.writing, writingTimeRemaining: 240));
+    add(StartWriting());
+  }
+
   void _onSubmitPerceptionMeta(SubmitPerceptionMeta event, Emitter<TatState> emit) {
+    _perceptionTimer?.cancel();
     emit(state.copyWith(
       phase: TatPhase.writing,
       situationSummary: event.situationSummary,
@@ -111,7 +148,7 @@ class TatBloc extends Bloc<TatEvent, TatState> {
       negativeCharacters: event.negativeCharacters,
       neutralCharacters: event.neutralCharacters,
       sketchNotes: event.sketchNotes,
-      writingTimeRemaining: 180,
+      writingTimeRemaining: 240,
     ));
     add(StartWriting());
   }
@@ -200,7 +237,7 @@ class TatBloc extends Bloc<TatEvent, TatState> {
       phase: TatPhase.waitingPictureConsent,
       prepTimeRemaining: 30,
       observationTimeRemaining: 30,
-      writingTimeRemaining: 180,
+      writingTimeRemaining: 240,
       submittedStory: '',
       feedback: null,
       leaderboard: const [],
@@ -217,6 +254,7 @@ class TatBloc extends Bloc<TatEvent, TatState> {
   Future<void> close() {
     _prepTimer?.cancel();
     _observationTimer?.cancel();
+    _perceptionTimer?.cancel();
     _writingTimer?.cancel();
     return super.close();
   }

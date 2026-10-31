@@ -1,6 +1,7 @@
 const { asyncHandler } = require('../middleware/asyncHandler');
 const { db } = require('../config/firebase');
 const { evaluatePpdtPipeline, ocrHandwrittenImage } = require('../services/aiService');
+const { resolveImage } = require('../services/storyImages');
 
 function badRequest(message) {
   const err = new Error(message);
@@ -23,7 +24,7 @@ const extractWrittenPaperText = asyncHandler(async (req, res) => {
 
 const runPpdtPipeline = asyncHandler(async (req, res) => {
   const userId = req.firebaseUser.uid;
-  const { imageUrl, storyMode, storyText, handwrittenText, perception } = req.body;
+  const { imageId, imageUrl, imageToken, storyMode, storyText, handwrittenText, perception } = req.body;
 
   const finalStory = (storyText || handwrittenText || '').trim();
   if (!finalStory) {
@@ -41,24 +42,32 @@ const runPpdtPipeline = asyncHandler(async (req, res) => {
     return {
       id: doc.id,
       score: Number(data.score || 0),
-      storyPreview: String(data.userStory || '').slice(0, 160),
-      feedbackSummary: String(data.aiFeedback || '').slice(0, 180)
+      // Other candidates' stories are never sent to the model: privacy, and stored prompt injection.
+      storyPreview: '',
+      feedbackSummary: ''
     };
   });
+
+  const image = await resolveImage({ imageId, imageUrl, imageToken, userId });
 
   const ai = await evaluatePpdtPipeline({
     storyText: finalStory,
     perception: perception || {},
-    topStories
+    topStories,
+    image
   });
 
   const docData = {
     userId,
-    imageUrl: imageUrl || '',
+    imageId: image?.id || '',
+    imageUrl: '', // signed URLs expire; the id is enough to rebuild one
     storyMode: storyMode || 'typing',
     userStory: finalStory,
     aiFeedback: ai.analysisMarkdown,
+    identifiedOlqs: ai.olqs || [],
     score: Number(ai.score || 0),
+    promptVersion: ai.meta?.promptVersion || null,
+    model: ai.meta?.model || null,
     completedAt: new Date(),
     perception: perception || {}
   };
@@ -76,8 +85,8 @@ const runPpdtPipeline = asyncHandler(async (req, res) => {
     return {
       id: doc.id,
       score: Number(data.score || 0),
-      storyPreview: String(data.userStory || '').slice(0, 160),
-      feedbackSummary: String(data.aiFeedback || '').slice(0, 180)
+      storyPreview: data.userId === userId ? String(data.userStory || '').slice(0, 160) : '',
+      feedbackSummary: data.userId === userId ? String(data.aiFeedback || '').slice(0, 180) : ''
     };
   });
 
@@ -95,6 +104,8 @@ const runPpdtPipeline = asyncHandler(async (req, res) => {
     success: true,
     analysisMarkdown: ai.analysisMarkdown,
     score: ai.score,
+    alignment: ai.alignment,
+    image: image ? { id: image.id, url: image.url } : null,
     leaderboard
   });
 });

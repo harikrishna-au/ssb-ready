@@ -18,7 +18,8 @@ class PpdtState extends Equatable {
   final StoryInputMode storyInputMode;
   final int prepTimeRemaining; // 30 seconds
   final int observationTimeRemaining; // 30 seconds
-  final int writingTimeRemaining; // 3 minutes (180 seconds)
+  final int perceptionTimeRemaining; // 60 seconds
+  final int writingTimeRemaining; // 4 minutes (240 seconds)
   final String imageUrl;
   final String situationSummary;
   final int positiveCharacters;
@@ -35,8 +36,9 @@ class PpdtState extends Equatable {
     this.storyInputMode = StoryInputMode.typing,
     this.prepTimeRemaining = 30,
     this.observationTimeRemaining = 30,
-    this.writingTimeRemaining = 180,
-    this.imageUrl = 'https://picsum.photos/800/600?grayscale&blur=2', // Placeholder hazy image
+    this.perceptionTimeRemaining = 60,
+    this.writingTimeRemaining = 240,
+    this.imageUrl = '',
     this.situationSummary = '',
     this.positiveCharacters = 0,
     this.negativeCharacters = 0,
@@ -53,6 +55,7 @@ class PpdtState extends Equatable {
     StoryInputMode? storyInputMode,
     int? prepTimeRemaining,
     int? observationTimeRemaining,
+    int? perceptionTimeRemaining,
     int? writingTimeRemaining,
     String? imageUrl,
     String? situationSummary,
@@ -70,6 +73,7 @@ class PpdtState extends Equatable {
       storyInputMode: storyInputMode ?? this.storyInputMode,
       prepTimeRemaining: prepTimeRemaining ?? this.prepTimeRemaining,
       observationTimeRemaining: observationTimeRemaining ?? this.observationTimeRemaining,
+      perceptionTimeRemaining: perceptionTimeRemaining ?? this.perceptionTimeRemaining,
       writingTimeRemaining: writingTimeRemaining ?? this.writingTimeRemaining,
       imageUrl: imageUrl ?? this.imageUrl,
       situationSummary: situationSummary ?? this.situationSummary,
@@ -90,6 +94,7 @@ class PpdtState extends Equatable {
         storyInputMode,
         prepTimeRemaining,
         observationTimeRemaining,
+        perceptionTimeRemaining,
         writingTimeRemaining,
         imageUrl,
         situationSummary,

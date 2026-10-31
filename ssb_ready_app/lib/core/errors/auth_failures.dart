@@ -63,6 +63,21 @@ class AuthFailure implements Exception {
     );
   }
 
+  /// Thrown when a rate limit is exceeded. [resetIn] is how long until
+  /// the oldest attempt expires and a new attempt is allowed.
+  factory AuthFailure.rateLimitExceeded({required Duration resetIn}) {
+    final m = resetIn.inMinutes;
+    final s = resetIn.inSeconds % 60;
+    final countdown = m > 0 ? '${m}m ${s}s' : '${s}s';
+    return AuthFailure(
+      message: 'Too many attempts. Try again in $countdown.',
+    );
+  }
+
+  /// Whether this failure was caused by a rate limit (used by UI to show
+  /// the lockout countdown instead of a generic snackbar).
+  bool get isRateLimit => message.startsWith('Too many attempts.');
+
   @override
   String toString() => message;
 }

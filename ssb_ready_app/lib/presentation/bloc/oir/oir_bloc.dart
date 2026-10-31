@@ -72,6 +72,7 @@ class OirBloc extends Bloc<OirEvent, OirState> {
   }
 
   void _onTickTimer(TickTimer event, Emitter<OirState> emit) {
+    if (state.status != OirStatus.inProgress) return;
     if (state.timeRemaining > 0) {
       emit(state.copyWith(timeRemaining: state.timeRemaining - 1));
     } else {

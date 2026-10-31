@@ -7,7 +7,7 @@ const {
   saveResponseTest
 } = require('../controllers/testController');
 
-const router = express.Router();
+const router = express.Router({ caseSensitive: true });
 
 router.post('/oir', protect, saveOirResult);
 router.get('/oir/history', protect, getOirHistory);

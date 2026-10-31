@@ -1,4 +1,6 @@
 const express = require('express');
+const { guard, AI } = require('../middleware/guard');
+const schemas = require('../middleware/schemas');
 const {
   evaluatePpdtHandler,
   evaluateWatHandler,
@@ -6,11 +8,11 @@ const {
   evaluateTatHandler
 } = require('../controllers/evaluationController');
 
-const router = express.Router();
+const router = express.Router({ caseSensitive: true });
 
-router.post('/ppdt', evaluatePpdtHandler);
-router.post('/wat', evaluateWatHandler);
-router.post('/srt', evaluateSrtHandler);
-router.post('/tat', evaluateTatHandler);
+router.post('/ppdt', ...guard({ schema: schemas.evalPpdt, limits: AI }), evaluatePpdtHandler);
+router.post('/wat', ...guard({ schema: schemas.evalResponses, limits: AI }), evaluateWatHandler);
+router.post('/srt', ...guard({ schema: schemas.evalResponses, limits: AI }), evaluateSrtHandler);
+router.post('/tat', ...guard({ schema: schemas.evalTat, limits: AI }), evaluateTatHandler);
 
 module.exports = router;

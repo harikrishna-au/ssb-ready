@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:ssb_ready_app/core/data/psychology_image_catalog.dart';
 import 'package:ssb_ready_app/core/enums/story_input_mode.dart';
 
 enum TatPhase {
@@ -19,7 +20,9 @@ class TatState extends Equatable {
   final int prepTimeRemaining;
   final int currentImageIndex;
   final int totalImages;
+  final List<PsychologyImageAsset> cards;
   final int observationTimeRemaining;
+  final int perceptionTimeRemaining;
   final int writingTimeRemaining;
   final String situationSummary;
   final int positiveCharacters;
@@ -37,8 +40,10 @@ class TatState extends Equatable {
     this.prepTimeRemaining = 30,
     this.currentImageIndex = 0,
     this.totalImages = 5,
+    this.cards = const [],
     this.observationTimeRemaining = 30,
-    this.writingTimeRemaining = 180,
+    this.perceptionTimeRemaining = 60,
+    this.writingTimeRemaining = 240,
     this.situationSummary = '',
     this.positiveCharacters = 0,
     this.negativeCharacters = 0,
@@ -58,9 +63,14 @@ class TatState extends Equatable {
     'A family is gathered around a dining table. The elderly person at the head of the table appears to be making an announcement.',
   ];
 
+  String get currentImageUrl =>
+      currentImageIndex < cards.length
+        ? cards[currentImageIndex].imageUrl
+          : '';
+
   String get currentImageDescription =>
-      currentImageIndex < imageDescriptions.length
-          ? imageDescriptions[currentImageIndex]
+      currentImageIndex < cards.length
+        ? cards[currentImageIndex].description
           : '';
 
   TatState copyWith({
@@ -69,7 +79,9 @@ class TatState extends Equatable {
     int? prepTimeRemaining,
     int? currentImageIndex,
     int? totalImages,
+    List<PsychologyImageAsset>? cards,
     int? observationTimeRemaining,
+    int? perceptionTimeRemaining,
     int? writingTimeRemaining,
     String? situationSummary,
     int? positiveCharacters,
@@ -87,7 +99,9 @@ class TatState extends Equatable {
       prepTimeRemaining: prepTimeRemaining ?? this.prepTimeRemaining,
       currentImageIndex: currentImageIndex ?? this.currentImageIndex,
       totalImages: totalImages ?? this.totalImages,
+      cards: cards ?? this.cards,
       observationTimeRemaining: observationTimeRemaining ?? this.observationTimeRemaining,
+      perceptionTimeRemaining: perceptionTimeRemaining ?? this.perceptionTimeRemaining,
       writingTimeRemaining: writingTimeRemaining ?? this.writingTimeRemaining,
       situationSummary: situationSummary ?? this.situationSummary,
       positiveCharacters: positiveCharacters ?? this.positiveCharacters,
@@ -108,7 +122,9 @@ class TatState extends Equatable {
         prepTimeRemaining,
         currentImageIndex,
         totalImages,
+        cards,
         observationTimeRemaining,
+        perceptionTimeRemaining,
         writingTimeRemaining,
         situationSummary,
         positiveCharacters,

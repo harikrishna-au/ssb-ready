@@ -1,5 +1,6 @@
 const admin = require('firebase-admin');
 const { config } = require('./index');
+const { logger } = require('../utils/logger');
 
 const firebaseConfig = {
   projectId: config.firebase.projectId,
@@ -14,7 +15,7 @@ function parseServiceAccountJson() {
   try {
     return JSON.parse(trimmed);
   } catch (e) {
-    console.error('FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON:', e.message);
+    logger.error('FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON:', e.message);
     throw e;
   }
 }
@@ -28,16 +29,16 @@ if (!admin.apps.length) {
       projectId: firebaseConfig.projectId || sa.project_id,
       storageBucket: firebaseConfig.storageBucket || undefined
     });
-    console.log(
+    logger.info(
       `Firebase Admin initialized with service account (${firebaseConfig.projectId || sa.project_id})`
     );
   } else if (firebaseConfig.projectId) {
     admin.initializeApp({
       ...firebaseConfig
     });
-    console.log(`Firebase initialized with Project ID: ${firebaseConfig.projectId}`);
+    logger.info(`Firebase initialized with Project ID: ${firebaseConfig.projectId}`);
   } else {
-    console.warn('Warning: FIREBASE_PROJECT_ID is missing and no FIREBASE_SERVICE_ACCOUNT_JSON');
+    logger.warn('Warning: FIREBASE_PROJECT_ID is missing and no FIREBASE_SERVICE_ACCOUNT_JSON');
     admin.initializeApp();
   }
 }

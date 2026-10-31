@@ -155,7 +155,7 @@ class _SrtScreenState extends State<SrtScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.secondary.withValues(alpha: 0.2)),
           boxShadow: [

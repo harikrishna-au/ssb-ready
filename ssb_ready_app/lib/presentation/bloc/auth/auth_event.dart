@@ -89,3 +89,12 @@ class SignOutEvent extends AuthEvent {
   @override
   List<Object?> get props => [];
 }
+
+/// Dispatched by [SessionManager] when it detects a sign-out or token
+/// revocation. Triggers a forced logout and navigation to login.
+class SessionExpiredEvent extends AuthEvent {
+  const SessionExpiredEvent();
+
+  @override
+  List<Object?> get props => [];
+}

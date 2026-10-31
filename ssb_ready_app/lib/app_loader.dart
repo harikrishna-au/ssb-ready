@@ -5,12 +5,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:ssb_ready_app/app.dart';
 import 'package:ssb_ready_app/core/theme/app_colors.dart';
+import 'package:ssb_ready_app/core/services/session_manager.dart';
+import 'package:ssb_ready_app/core/services/supabase_service.dart';
 import 'package:ssb_ready_app/data/datasources/auth_service.dart';
 import 'package:ssb_ready_app/data/datasources/firebase_auth_service.dart';
 import 'package:ssb_ready_app/data/datasources/oir/firestore_oir_data_source.dart';
 import 'package:ssb_ready_app/data/repositories/auth_repository_impl.dart';
 import 'package:ssb_ready_app/domain/repositories/auth_repository.dart';
-import 'package:ssb_ready_app/data/datasources/firebase_test_history_service.dart';
+import 'package:ssb_ready_app/data/datasources/supabase_test_history_service.dart';
 import 'package:ssb_ready_app/domain/repositories/test_history_repository.dart';
 import 'package:ssb_ready_app/presentation/bloc/auth/auth_bloc.dart';
 import 'package:ssb_ready_app/presentation/bloc/oir/oir_bloc.dart';
@@ -19,6 +21,7 @@ import 'package:ssb_ready_app/presentation/bloc/wat/wat_bloc.dart';
 import 'package:ssb_ready_app/presentation/bloc/srt/srt_bloc.dart';
 import 'package:ssb_ready_app/presentation/bloc/tat/tat_bloc.dart';
 import 'package:ssb_ready_app/presentation/bloc/interview/interview_bloc.dart';
+import 'package:ssb_ready_app/presentation/bloc/sdt/sdt_bloc.dart';
 
 /// Paints an immediate lightweight frame, then loads Firebase / prefs off the
 /// critical path to first paint. Helps avoid emulator "System UI isn't
@@ -57,12 +60,20 @@ class _AppLoaderState extends State<AppLoader> {
         Firebase.initializeApp(),
         SharedPreferences.getInstance(),
       ]);
+      // Initialize Supabase after dotenv is loaded (URL + anon key in .env)
+      await SupabaseService.initialize();
+
       FirebaseAuthService.applyAuthLocaleFromPlatform();
+
+      // Start listening to Firebase Auth session lifecycle events.
+      // AuthBloc subscribes to SessionManager.instance.statusStream to detect
+      // forced sign-out / token revocation across devices.
+      SessionManager.instance.initialize();
       final prefs = initResults[1] as SharedPreferences;
 
       final authService = FirebaseAuthService(prefs) as AuthService;
       final testHistoryRepository =
-          FirebaseTestHistoryService() as TestHistoryRepository;
+          SupabaseTestHistoryService() as TestHistoryRepository;
 
       if (!mounted) {
         return;
@@ -122,13 +133,16 @@ class _AppLoaderState extends State<AppLoader> {
                   context.read<TestHistoryRepository>(),
                 ),
               ),
+              BlocProvider<SdtBloc>(
+                create: (context) => SdtBloc(),
+              ),
             ],
             child: const App(),
           ),
         );
       });
 
-      debugPrint('✓ Using Firebase backend');
+      debugPrint('✓ Bootstrap complete — Firebase Auth + Supabase storage');
     } catch (e, st) {
       debugPrint('Bootstrap failed: $e\n$st');
       if (mounted) {

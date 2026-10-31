@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:ssb_ready_app/core/data/psychology_image_catalog.dart';
 import 'package:ssb_ready_app/core/services/backend_api_client.dart';
 import 'package:ssb_ready_app/presentation/bloc/ppdt/ppdt_event.dart';
 import 'package:ssb_ready_app/presentation/bloc/ppdt/ppdt_state.dart';
@@ -14,27 +15,36 @@ class PpdtBloc extends Bloc<PpdtEvent, PpdtState> {
   final BackendApiClient _apiClient = BackendApiClient();
   Timer? _prepTimer;
   Timer? _observationTimer;
+  Timer? _perceptionTimer;
   Timer? _writingTimer;
 
-  PpdtBloc(this._authRepository, this._historyRepository) : super(const PpdtState()) {
+  PpdtBloc(this._authRepository, this._historyRepository)
+      : super(PpdtState(imageUrl: PsychologyImageCatalog.ppdtImageUrls.first)) {
+    on<ResetPpdtFlow>(_onResetPpdtFlow);
     on<BeginPpdtFlow>(_onBeginPpdtFlow);
     on<AcceptPictureViewing>(_onAcceptPictureViewing);
     on<SelectStoryMode>(_onSelectStoryMode);
     on<TickPrepTimer>(_onTickPrepTimer);
+    on<SkipPrep>(_onSkipPrep);
     on<StartObservation>(_onStartObservation);
     on<TickObservationTimer>(_onTickObservationTimer);
+    on<TickPerceptionTimer>(_onTickPerceptionTimer);
     on<SubmitPerceptionMeta>(_onSubmitPerceptionMeta);
     on<StartWriting>(_onStartWriting);
     on<TickWritingTimer>(_onTickWritingTimer);
     on<SubmitStory>(_onSubmitStory);
   }
 
-  void _onBeginPpdtFlow(BeginPpdtFlow event, Emitter<PpdtState> emit) {
+  Future<void> _onBeginPpdtFlow(BeginPpdtFlow event, Emitter<PpdtState> emit) async {
+    final user = await _authRepository.getCurrentUser();
+    final isPremium = user?.isPremium == true;
     emit(state.copyWith(
+      imageUrl: PsychologyImageCatalog.randomPpdtImageUrl(premium: isPremium),
       phase: PpdtPhase.waitingPictureConsent,
       prepTimeRemaining: 30,
       observationTimeRemaining: 30,
-      writingTimeRemaining: 180,
+      perceptionTimeRemaining: 60,
+      writingTimeRemaining: 240,
       submittedStory: '',
       feedback: null,
       leaderboard: const [],
@@ -45,6 +55,14 @@ class PpdtBloc extends Bloc<PpdtEvent, PpdtState> {
       neutralCharacters: 0,
       sketchNotes: '',
     ));
+  }
+
+  void _onResetPpdtFlow(ResetPpdtFlow event, Emitter<PpdtState> emit) {
+    _prepTimer?.cancel();
+    _observationTimer?.cancel();
+    _perceptionTimer?.cancel();
+    _writingTimer?.cancel();
+    emit(PpdtState(imageUrl: PsychologyImageCatalog.previewPpdtImageUrls.first));
   }
 
   void _onAcceptPictureViewing(AcceptPictureViewing event, Emitter<PpdtState> emit) {
@@ -71,11 +89,18 @@ class PpdtBloc extends Bloc<PpdtEvent, PpdtState> {
     add(StartObservation());
   }
 
+  void _onSkipPrep(SkipPrep event, Emitter<PpdtState> emit) {
+    if (state.phase != PpdtPhase.prep) return;
+    _prepTimer?.cancel();
+    add(StartObservation());
+  }
+
   void _onStartObservation(StartObservation event, Emitter<PpdtState> emit) {
     emit(state.copyWith(
       phase: PpdtPhase.observing,
       observationTimeRemaining: 30,
-      writingTimeRemaining: 180,
+      perceptionTimeRemaining: 60,
+      writingTimeRemaining: 240,
       submittedStory: '',
       errorMessage: null,
     ));
@@ -93,11 +118,30 @@ class PpdtBloc extends Bloc<PpdtEvent, PpdtState> {
       emit(state.copyWith(observationTimeRemaining: state.observationTimeRemaining - 1));
     } else {
       _observationTimer?.cancel();
-      emit(state.copyWith(phase: PpdtPhase.perceptionCapture));
+      emit(state.copyWith(
+        phase: PpdtPhase.perceptionCapture,
+        perceptionTimeRemaining: 60,
+      ));
+      _perceptionTimer?.cancel();
+      _perceptionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        add(TickPerceptionTimer());
+      });
     }
   }
 
+  void _onTickPerceptionTimer(TickPerceptionTimer event, Emitter<PpdtState> emit) {
+    if (state.phase != PpdtPhase.perceptionCapture) return;
+    if (state.perceptionTimeRemaining > 0) {
+      emit(state.copyWith(perceptionTimeRemaining: state.perceptionTimeRemaining - 1));
+      return;
+    }
+    _perceptionTimer?.cancel();
+    emit(state.copyWith(phase: PpdtPhase.writing, writingTimeRemaining: 240));
+    add(StartWriting());
+  }
+
   void _onSubmitPerceptionMeta(SubmitPerceptionMeta event, Emitter<PpdtState> emit) {
+    _perceptionTimer?.cancel();
     emit(state.copyWith(
       phase: PpdtPhase.writing,
       situationSummary: event.situationSummary,
@@ -105,7 +149,7 @@ class PpdtBloc extends Bloc<PpdtEvent, PpdtState> {
       negativeCharacters: event.negativeCharacters,
       neutralCharacters: event.neutralCharacters,
       sketchNotes: event.sketchNotes,
-      writingTimeRemaining: 180,
+      writingTimeRemaining: 240,
     ));
     add(StartWriting());
   }
@@ -186,6 +230,7 @@ class PpdtBloc extends Bloc<PpdtEvent, PpdtState> {
   Future<void> close() {
     _prepTimer?.cancel();
     _observationTimer?.cancel();
+    _perceptionTimer?.cancel();
     _writingTimer?.cancel();
     return super.close();
   }

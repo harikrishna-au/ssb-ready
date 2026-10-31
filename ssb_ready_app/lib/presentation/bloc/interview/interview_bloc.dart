@@ -56,9 +56,10 @@ class InterviewBloc extends Bloc<InterviewEvent, InterviewState> {
     try {
       await _historyRepository.savePiq(state.piq!);
       emit(state.copyWith(status: InterviewStatus.success));
-      // Revert to loaded status after success so UI knows saving is done
+      // Revert to loaded status after success so UI knows saving is done.
+      // Guard with isClosed to avoid emitting after the bloc is disposed.
       await Future.delayed(const Duration(seconds: 1));
-      emit(state.copyWith(status: InterviewStatus.loaded));
+      if (!isClosed) emit(state.copyWith(status: InterviewStatus.loaded));
     } catch (e) {
       emit(state.copyWith(status: InterviewStatus.error, errorMessage: e.toString()));
     }

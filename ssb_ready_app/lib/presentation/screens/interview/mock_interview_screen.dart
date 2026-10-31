@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'package:ssb_ready_app/core/theme/app_colors.dart';
 import 'package:ssb_ready_app/presentation/bloc/interview/interview_bloc.dart';
 import 'package:ssb_ready_app/presentation/bloc/interview/interview_bloc_state.dart';
 
@@ -295,7 +296,7 @@ class _MockInterviewScreenState extends State<MockInterviewScreen> {
           child: Scaffold(
       appBar: AppBar(
         title: const Text('Nilo AI Interview'),
-        backgroundColor: Colors.purple[800],
+        backgroundColor: AppColors.secondary,
         foregroundColor: Colors.white,
         actions: [
           IconButton(

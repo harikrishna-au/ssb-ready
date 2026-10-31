@@ -9,6 +9,7 @@ class User extends Equatable {
   final bool? emailVerified;
   final DateTime? createdAt;
   final String? userType;
+  final bool? isPremium;
 
   const User({
     required this.id,
@@ -19,6 +20,7 @@ class User extends Equatable {
     this.emailVerified,
     this.createdAt,
     this.userType,
+    this.isPremium,
   });
 
   String get fullName => '${firstName ?? ''} ${lastName ?? ''}'.trim();
@@ -33,5 +35,6 @@ class User extends Equatable {
         emailVerified,
         createdAt,
         userType,
+        isPremium,
       ];
 }

@@ -220,7 +220,7 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
       child: Material(
         color: isSelected
             ? AppColors.secondary.withValues(alpha: 0.07)
-            : Colors.white,
+            : AppColors.surface,
         elevation: isSelected ? 2 : 0,
         shadowColor: AppColors.secondary.withValues(alpha: 0.18),
         shape: RoundedRectangleBorder(

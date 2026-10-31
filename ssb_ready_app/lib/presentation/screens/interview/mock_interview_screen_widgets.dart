@@ -132,7 +132,7 @@ extension _MockInterviewScreenWidgets on _MockInterviewScreenState {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         decoration: BoxDecoration(
-          color: isUser ? Colors.purple[700] : Colors.grey[200],
+          color: isUser ? AppColors.secondary : AppColors.surfaceSoft,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -142,8 +142,8 @@ extension _MockInterviewScreenWidgets on _MockInterviewScreenState {
         ),
         child: Text(
           content,
-          style: TextStyle(
-            color: isUser ? Colors.white : Colors.black87,
+          style: const TextStyle(
+            color: AppColors.textPrimary,
             fontSize: 15,
           ),
         ),
@@ -158,10 +158,10 @@ extension _MockInterviewScreenWidgets on _MockInterviewScreenState {
         margin: const EdgeInsets.symmetric(vertical: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.grey[200],
+          color: AppColors.surfaceSoft,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Text('IO is thinking...', style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
+        child: const Text('IO is thinking...', style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: AppColors.textSecondary)),
       ),
     );
   }
@@ -173,7 +173,7 @@ extension _MockInterviewScreenWidgets on _MockInterviewScreenState {
         margin: const EdgeInsets.symmetric(horizontal: 18),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.bgSurface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 12)],
         ),
@@ -181,11 +181,11 @@ extension _MockInterviewScreenWidgets on _MockInterviewScreenState {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Finish Interview?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            const Text('Finish Interview?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
             const SizedBox(height: 8),
             const Text(
               'Are you sure you want to end this interview now?',
-              style: TextStyle(color: Colors.black54),
+              style: TextStyle(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 14),
             Row(
@@ -215,14 +215,14 @@ extension _MockInterviewScreenWidgets on _MockInterviewScreenState {
     final top = bank.take(8).toList();
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-      color: Colors.purple.withValues(alpha: 0.04),
+      color: AppColors.secondary.withValues(alpha: 0.04),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Practice prompts',
             style: TextStyle(
-              color: Colors.purple[800],
+              color: AppColors.secondary,
               fontWeight: FontWeight.w700,
               fontSize: 13,
             ),
@@ -264,8 +264,8 @@ extension _MockInterviewScreenWidgets on _MockInterviewScreenState {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 5, offset: const Offset(0, -2))],
+        color: AppColors.bgSurface,
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 5, offset: const Offset(0, -2))],
       ),
       child: Row(
         children: [
@@ -274,10 +274,10 @@ extension _MockInterviewScreenWidgets on _MockInterviewScreenState {
             height: 50,
             decoration: BoxDecoration(
               color: micDisabled
-                  ? Colors.grey.shade300
+                  ? AppColors.surfaceHigh
                   : _isListening
-                      ? Colors.red.shade700
-                      : Colors.purple.shade700,
+                      ? AppColors.error
+                      : AppColors.secondary,
               shape: BoxShape.circle,
             ),
             child: IconButton(
@@ -306,7 +306,7 @@ extension _MockInterviewScreenWidgets on _MockInterviewScreenState {
           const SizedBox(width: 8),
           IconButton(
             onPressed: isLoading ? null : _sendMessage,
-            icon: Icon(Icons.send, color: isLoading ? Colors.grey : Colors.purple[700]),
+            icon: Icon(Icons.send, color: isLoading ? AppColors.textHint : AppColors.secondary),
           ),
         ],
       ),
