@@ -34,6 +34,14 @@ const fakeSupabase = {
 };
 const key = require.resolve('../config/supabase');
 require.cache[key] = { id: key, filename: key, loaded: true, exports: fakeSupabase };
+
+// Entitlement now lives in services/premium (Agent 1: linked identities, caching). Stub it directly so
+// these tests are about picture access, not about how premium is looked up.
+const premiumKey = require.resolve('../services/premium');
+require.cache[premiumKey] = { id: premiumKey, filename: premiumKey, loaded: true, exports: {
+  isPremium: async (id) => state.premiumUsers.has(id),
+  getEntitlement: async (id) => ({ premium: state.premiumUsers.has(id) }),
+} };
 const si = require('../services/storyImages');
 
 test.beforeEach(() => { si._resetIndexCache(); state.premiumUsers.clear(); });
