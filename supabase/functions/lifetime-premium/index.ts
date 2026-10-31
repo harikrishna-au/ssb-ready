@@ -43,7 +43,9 @@ function buildUsername(email: string, displayName: string) {
     .slice(0, 24) || "member";
 }
 
-async function verifyFirebaseToken(token: string) {
+type AuthUser = { uid: string; email: string; name: string; provider: "firebase" | "clerk" };
+
+async function verifyFirebaseToken(token: string): Promise<AuthUser> {
   const projectId = requireEnv("FIREBASE_PROJECT_ID");
   const { payload } = await jwtVerify(token, firebaseJwks, {
     issuer: `https://securetoken.google.com/${projectId}`,
@@ -57,7 +59,56 @@ async function verifyFirebaseToken(token: string) {
     uid,
     email: normalizeText(payload.email),
     name: normalizeText(payload.name),
+    provider: "firebase",
   };
+}
+
+let clerkJwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+
+/**
+ * Clerk session JWT. The issuer is pinned from CLERK_ISSUER (never read from the token), the
+ * signing keys come from that issuer's JWKS, and jose enforces signature, exp and nbf.
+ */
+async function verifyClerkToken(token: string): Promise<AuthUser> {
+  const issuer = requireEnv("CLERK_ISSUER").replace(/\/$/, "");
+  clerkJwks ??= createRemoteJWKSet(new URL(Deno.env.get("CLERK_JWKS_URL") || `${issuer}/.well-known/jwks.json`));
+  const { payload } = await jwtVerify(token, clerkJwks, { issuer, clockTolerance: 5 });
+
+  const allowed = normalizeText(Deno.env.get("CLERK_AUTHORIZED_PARTIES")).split(",").map((v) => v.trim()).filter(Boolean);
+  const azp = normalizeText(payload.azp);
+  if (allowed.length && azp && !allowed.includes(azp)) throw new Error("Token was issued for a different app");
+
+  const uid = normalizeText(payload.sub);
+  if (!uid) throw new Error("Clerk token did not include a user id");
+  return { uid, email: normalizeText(payload.email), name: normalizeText(payload.name), provider: "clerk" };
+}
+
+function unverifiedIssuer(token: string): string {
+  try {
+    const part = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    return normalizeText(JSON.parse(atob(part)).iss);
+  } catch {
+    return "";
+  }
+}
+
+/** Firebase ID tokens (mobile) and Clerk session tokens (web). Only used to choose a verifier; the verifier checks everything. */
+async function verifyAuthToken(token: string): Promise<AuthUser> {
+  const iss = unverifiedIssuer(token);
+  if (iss.startsWith("https://securetoken.google.com/")) return verifyFirebaseToken(token);
+  if (iss) return verifyClerkToken(token);
+  throw new Error("Unrecognised token");
+}
+
+/** For web (Clerk) users the PIQ must be complete before an order exists. The backend reads Firestore and decides. */
+async function assertPiqComplete(token: string) {
+  const backendUrl = normalizeText(Deno.env.get("BACKEND_URL")).replace(/\/$/, "");
+  if (!backendUrl) throw new Error("Web checkout is not configured (BACKEND_URL missing)");
+  const res = await fetch(`${backendUrl}/api/me`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error("Could not check your PIQ right now");
+  const me = await res.json();
+  if (!me.piqComplete) throw new Error("Complete your PIQ before paying");
+  if (me.premium) throw new Error("You already have Lifetime access");
 }
 
 function razorpayAuthHeader() {
@@ -156,6 +207,13 @@ async function updatePremiumProfile(params: {
     updated_at: now,
   };
 
+  const { data: existing } = await admin
+    .from("premium_members")
+    .select("premium_since, subscription_status")
+    .eq("user_id", params.uid)
+    .maybeSingle();
+  const premiumSince = existing?.subscription_status === "active" && existing.premium_since ? existing.premium_since : now;
+
   const { error: profileError } = await admin
     .from("profiles")
     .upsert(profilePayload, { onConflict: "user_id" });
@@ -169,6 +227,7 @@ async function updatePremiumProfile(params: {
         order_id: params.orderId,
         payment_id: params.paymentId,
         amount_inr: PAYABLE_AMOUNT_INR,
+        premium_since: premiumSince,
       },
       { onConflict: "user_id" },
     );
@@ -209,11 +268,12 @@ serve(async (req: Request) => {
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
     if (!token) return jsonResponse({ error: "Unauthorized" }, 401);
 
-    const authUser = await verifyFirebaseToken(token);
+    const authUser = await verifyAuthToken(token);
     const body = await req.json();
     const action = normalizeText(body.action);
 
     if (action === "create_order") {
+      if (authUser.provider === "clerk") await assertPiqComplete(token);
       const email = normalizeText(body.email) || authUser.email;
       const username = buildUsername(email, normalizeText(body.username) || authUser.name);
       const order = await createRazorpayOrder({
@@ -226,8 +286,12 @@ serve(async (req: Request) => {
       await admin.from("payment_transactions").insert({
         user_id: authUser.uid,
         txnid: order.id,
+        order_id: order.id,
         amount: PAYABLE_AMOUNT_INR,
-        status: "order_created",
+        amount_paise: PAYABLE_AMOUNT_PAISE,
+        status: "created",
+        email,
+        source: authUser.provider === "clerk" ? "web" : "mobile",
         provider_reference_id: order.id,
         raw_response: order,
       });
@@ -260,10 +324,19 @@ serve(async (req: Request) => {
         return jsonResponse({ error: "Invalid payment signature" }, 400);
       }
 
+      const { data: txn } = await supabaseAdmin()
+        .from("payment_transactions")
+        .select("status")
+        .eq("txnid", orderId)
+        .maybeSingle();
+      if (txn?.status === "refunded") {
+        return jsonResponse({ error: "This payment was refunded" }, 409);
+      }
+
       const order = await fetchRazorpayOrder(orderId);
       const notes = order.notes ?? {};
       const noteUid = normalizeText(notes.uid);
-      if (noteUid && noteUid !== authUser.uid) {
+      if (noteUid !== authUser.uid) {
         return jsonResponse({ error: "Order does not belong to this user" }, 403);
       }
       if (order.amount !== PAYABLE_AMOUNT_PAISE) {
@@ -294,14 +367,18 @@ serve(async (req: Request) => {
       });
 
       const admin = supabaseAdmin();
+      // Only move created/failed rows forward, so a webhook or an earlier verify that already ran is not overwritten.
       await admin.from("payment_transactions").update({
-        status: "premium_activated",
+        status: "paid",
+        payment_id: paymentId,
         provider_reference_id: paymentId,
+        paid_at: new Date().toISOString(),
+        receipt_no: `RK-${paymentId.replace(/^pay_/, "").toUpperCase()}`,
         raw_response: {
           order,
           razorpay_payment_id: paymentId,
         },
-      }).eq("txnid", orderId);
+      }).eq("txnid", orderId).in("status", ["created", "failed"]);
 
       return jsonResponse({
         success: true,
