@@ -14,6 +14,7 @@ const legalRoutes = require('./routes/legalRoutes');
 const accountRoutes = require('./routes/accountRoutes');
 const paymentsRoutes = require('./routes/paymentsRoutes');
 const meRoutes = require('./routes/meRoutes');
+const radarRoutes = require('./routes/radarRoutes');
 
 function createApp() {
   const app = express();
@@ -58,6 +59,7 @@ function createApp() {
   app.use('/api/account', accountRoutes);
   app.use('/api/payments', paymentsRoutes);
   app.use('/api/me', meRoutes);
+  app.use('/api/radar', radarRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

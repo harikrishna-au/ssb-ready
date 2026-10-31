@@ -13,8 +13,9 @@
     "psychology:import-images": "node scripts/import_psychology_images.js",
     "oir:purge": "node scripts/purge_oir_questions.js",
     "oir:purge-images": "node scripts/purge_oir_questions.js --only-with-image",
-    "test": "node --test tests/",
-    "audit": "npm audit --omit=dev --audit-level=high"
+    "test": "node --test tests/ test/",
+    "audit": "npm audit --omit=dev --audit-level=high",
+    "radar:seed": "node scripts/seed_radar.js"
   },
   "engines": {
     "node": ">=18"
