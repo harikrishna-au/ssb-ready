@@ -5,6 +5,8 @@ create table if not exists public.content_sets (
   set_id uuid primary key default gen_random_uuid(),
   user_id text not null,
   bank text not null,
+  kind text not null default 'full' check (kind in ('full','quick')),  -- only full-size sets can be ranked
+  size int not null,                            -- fixed by the server when the set is issued
   item_ids text[] not null,
   answers jsonb not null default '{}'::jsonb,   -- { "<question id>": { "index": 2, "correct": true } }
   issued_at timestamptz not null default now(),

@@ -31,7 +31,7 @@ export default function OirPage() {
   const [error, setError] = useState("");
 
   const fetchQuestions = () =>
-    fetchContent<OirItem>("oir", QUESTION_COUNT)
+    fetchContent<OirItem>("oir", QUESTION_COUNT, "full")
       .then((r) => { setSetId(r.setId ?? ""); setQuestions(r.items.map((i) => ({ id: i.id, text: i.text, options: i.options, image_url: i.image_url }))); setPhase("intro"); })
       .catch((e) => { setError(e instanceof Error ? e.message : "Could not load questions"); setPhase("error"); });
   const retry = () => { setPhase("loading"); void fetchQuestions(); };

@@ -11,6 +11,7 @@ function builder(name) {
   const st = { filters: [], op: 'select' };
   const b = {
     select: () => b,
+    gte: (c, v) => { st.filters.push((r) => String(r[c]) >= String(v)); return b; },
     eq: (c, v) => { st.filters.push((r) => r[c] === v); return b; },
     neq: (c, v) => { st.filters.push((r) => r[c] !== v); return b; },
     delete: () => { st.op = 'delete'; return b; },
@@ -87,7 +88,7 @@ test('OIR questions are served without answer or explanation, with a set id', as
 
 test('OIR check: correct answer revealed only after recording, once per question', async () => {
   reset();
-  const { setId } = await bank.getRandomSet({ bank: 'oir', count: 3, userId: 'u1' });
+  const { setId } = await bank.getRandomSet({ bank: 'oir', count: 3, userId: 'u1', mode: 'quick' });
   assert.deepEqual(await bank.checkOirAnswer({ userId: 'u1', setId, questionId: 'q1', index: 1 }), { correct: false, correctIndex: 2, explanation: 'because' });
   await assert.rejects(bank.checkOirAnswer({ userId: 'u1', setId, questionId: 'q1', index: 2 }), (e) => e.statusCode === 409); // repeat
   assert.equal((await bank.checkOirAnswer({ userId: 'u1', setId, questionId: 'q2', index: 2 })).correct, true);
@@ -96,7 +97,7 @@ test('OIR check: correct answer revealed only after recording, once per question
 
 test('OIR check: unknown question id, question outside the set, and rejected question are refused', async () => {
   reset();
-  const { setId } = await bank.getRandomSet({ bank: 'oir', count: 3, userId: 'u1' });
+  const { setId } = await bank.getRandomSet({ bank: 'oir', count: 3, userId: 'u1', mode: 'quick' });
   await assert.rejects(bank.checkOirAnswer({ userId: 'u1', setId, questionId: 'nope', index: 0 }), (e) => e.statusCode === 403);
   await assert.rejects(bank.checkOirAnswer({ userId: 'u1', setId, questionId: 'qx', index: 0 }), (e) => e.statusCode === 403);
   tables.content_sets[0].item_ids.push('qx');
@@ -105,7 +106,7 @@ test('OIR check: unknown question id, question outside the set, and rejected que
 
 test('OIR check: another user\'s set cannot be used, and answers cannot be enumerated without a set', async () => {
   reset();
-  const { setId } = await bank.getRandomSet({ bank: 'oir', count: 3, userId: 'u1' });
+  const { setId } = await bank.getRandomSet({ bank: 'oir', count: 3, userId: 'u1', mode: 'quick' });
   await assert.rejects(bank.checkOirAnswer({ userId: 'attacker', setId, questionId: 'q1', index: 0 }), (e) => e.statusCode === 404);
   await assert.rejects(bank.checkOirAnswer({ userId: 'attacker', setId: 'set999', questionId: 'q1', index: 0 }), (e) => e.statusCode === 404);
   await assert.rejects(bank.checkOirAnswer({ userId: 'attacker', questionId: 'q1', index: 0 }), (e) => e.statusCode === 400);
@@ -113,17 +114,17 @@ test('OIR check: another user\'s set cannot be used, and answers cannot be enume
 
 test('OIR check: expired set is refused', async () => {
   reset();
-  const { setId } = await bank.getRandomSet({ bank: 'oir', count: 3, userId: 'u1' });
+  const { setId } = await bank.getRandomSet({ bank: 'oir', count: 3, userId: 'u1', mode: 'quick' });
   tables.content_sets[0].expires_at = new Date(Date.now() - 1000).toISOString();
   await assert.rejects(bank.checkOirAnswer({ userId: 'u1', setId, questionId: 'q1', index: 0 }), (e) => e.statusCode === 410);
 });
 
 test('OIR score comes from server-checked answers only', async () => {
   reset();
-  const { setId } = await bank.getRandomSet({ bank: 'oir', count: 3, userId: 'u1' });
+  const { setId } = await bank.getRandomSet({ bank: 'oir', count: 3, userId: 'u1', mode: 'quick' });
   await bank.checkOirAnswer({ userId: 'u1', setId, questionId: 'q1', index: 2 });
   await bank.checkOirAnswer({ userId: 'u1', setId, questionId: 'q2', index: 0 });
-  assert.deepEqual(await bank.getOirSetScore({ userId: 'u1', setId }), { score: 1, total: 3, answered: 2 });
+  assert.deepEqual(await bank.getOirSetScore({ userId: 'u1', setId }), { score: 1, total: 3, answered: 2, kind: 'quick', ranked: false });
   await assert.rejects(bank.getOirSetScore({ userId: 'u2', setId }), (e) => e.statusCode === 404);
 });
 
@@ -136,4 +137,29 @@ test('seed files parse and cover a full test', () => {
 
 test('unknown bank is a 404', async () => {
   await assert.rejects(bank.getRandomSet({ bank: 'nope', count: 1, userId: 'u' }), (e) => e.statusCode === 404);
+});
+
+test('tiny/quick set is never ranked; abandoned set only counts as an attempt', async () => {
+  reset();
+  const r = await bank.getRandomSet({ bank: 'oir', count: 3, userId: 'u1', mode: 'quick' });
+  assert.equal(r.kind, 'quick');
+  await bank.checkOirAnswer({ userId: 'u1', setId: r.setId, questionId: r.items[0].id, index: 2 });
+  assert.equal((await bank.getOirSetScore({ userId: 'u1', setId: r.setId })).ranked, false);
+});
+
+test('a full-size set is ranked and total is fixed by the server', async () => {
+  reset();
+  tables.content_oir_questions = Array.from({ length: bank.OIR_FULL_SET_SIZE }, (_, i) => ({ id: `f${i}`, text: 'Q', options: ['a', 'b'], correct_answer_index: 0, active: true, review_status: 'approved' }));
+  bank._clearCache();
+  const r = await bank.getRandomSet({ bank: 'oir', count: 2, userId: 'u1', mode: 'full' });
+  assert.equal(r.items.length, bank.OIR_FULL_SET_SIZE); // client count ignored
+  await bank.checkOirAnswer({ userId: 'u1', setId: r.setId, questionId: r.items[0].id, index: 0 });
+  assert.deepEqual(await bank.getOirSetScore({ userId: 'u1', setId: r.setId }), { score: 1, total: bank.OIR_FULL_SET_SIZE, answered: 1, kind: 'full', ranked: true });
+});
+
+test('daily issue cap', async () => {
+  reset();
+  for (let i = 0; i < bank.OIR_DAILY_SET_CAP; i++) await bank.getRandomSet({ bank: 'oir', count: 3, userId: 'u1', mode: 'quick' });
+  await assert.rejects(bank.getRandomSet({ bank: 'oir', count: 3, userId: 'u1', mode: 'quick' }), (e) => e.statusCode === 429);
+  await bank.getRandomSet({ bank: 'oir', count: 3, userId: 'u2', mode: 'quick' }); // other users unaffected
 });

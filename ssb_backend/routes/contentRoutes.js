@@ -19,7 +19,7 @@ router.get(
   '/:bank',
   asyncHandler(async (req, res) => {
     const tags = typeof req.query.tags === 'string' ? req.query.tags.split(',').filter(Boolean) : undefined;
-    const out = await getRandomSet({ bank: req.params.bank, count: req.query.count, userId: req.firebaseUser.uid, tags });
+    const out = await getRandomSet({ bank: req.params.bank, count: req.query.count, userId: req.firebaseUser.uid, tags, mode: req.query.mode === 'full' ? 'full' : 'quick' });
     res.json({ success: true, ...out });
   })
 );

@@ -5,8 +5,8 @@ export type OirItem = ContentItem & { options: string[]; type?: string | null; i
 export type ContentSet<T> = { items: T[]; available: number; repeated: number; setId?: string };
 
 /** Random set from a server-side bank. The server avoids what this user saw recently. */
-export const fetchContent = <T = ContentItem>(bank: "wat" | "srt" | "lecturette" | "oir", count: number) =>
-  api.get<ContentSet<T>>(`/api/content/${bank}?count=${count}`);
+export const fetchContent = <T = ContentItem>(bank: "wat" | "srt" | "lecturette" | "oir", count: number, mode?: "quick" | "full") =>
+  api.get<ContentSet<T>>(`/api/content/${bank}?count=${count}${mode ? `&mode=${mode}` : ""}`);
 
 /**
  * OIR answers never reach the browser until the user has committed to one, and only for questions in the set

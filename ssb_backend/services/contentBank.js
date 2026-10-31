@@ -12,6 +12,11 @@ const BANKS = {
 const INDEX_TTL_MS = 5 * 60 * 1000;
 /** An OIR set can be answered for this long after it is issued (the test itself is 10 minutes). */
 const SET_TTL_MS = 60 * 60 * 1000;
+/** A ranked OIR test is exactly this many questions; the server decides, not the client. */
+const OIR_FULL_SET_SIZE = Number(process.env.OIR_FULL_SET_SIZE || 25);
+const OIR_QUICK_SET_SIZE = Number(process.env.OIR_QUICK_SET_SIZE || 10);
+/** Sets of any kind a user may be issued in 24 hours. Issued-but-unsubmitted sets count as attempts. */
+const OIR_DAILY_SET_CAP = Number(process.env.OIR_DAILY_SET_CAP || 12);
 const cache = new Map();
 
 const httpError = (status, message) => Object.assign(new Error(message), { statusCode: status });
@@ -41,10 +46,14 @@ async function loadBank(bank) {
  * Random set that avoids what this user saw most recently.
  * Unseen items first; if the bank is smaller than `count` plus history, the least recently seen fill the rest.
  */
-async function getRandomSet({ bank, count, userId, tags }) {
+async function getRandomSet({ bank, count, userId, tags, mode }) {
   const def = BANKS[bank];
   if (!def) throw httpError(404, 'Unknown content bank');
-  const n = Math.max(1, Math.min(def.max, Number.parseInt(count, 10) || 1));
+  let n = Math.max(1, Math.min(def.max, Number.parseInt(count, 10) || 1));
+  if (bank === 'oir') {
+    await enforceDailyCap(userId);
+    n = mode === 'full' ? OIR_FULL_SET_SIZE : Math.min(n, OIR_QUICK_SET_SIZE);
+  }
   let rows = await loadBank(bank);
   if (Array.isArray(tags) && tags.length) rows = rows.filter((r) => (r.tags || []).some((t) => tags.includes(t)));
   if (rows.length === 0) throw httpError(503, 'No content is available yet');
@@ -76,15 +85,27 @@ async function getRandomSet({ bank, count, userId, tags }) {
     return out;
   });
   const out = { items, available: rows.length, repeated: Math.max(0, picked.length - unseen.length) };
-  if (bank === 'oir') out.setId = await issueSet({ userId, bank, itemIds: picked.map((r) => r.id) });
+  if (bank === 'oir') {
+    // Ranked only if the set really is full size; a short bank or a quick request never is.
+    const kind = mode === 'full' && picked.length === OIR_FULL_SET_SIZE ? 'full' : 'quick';
+    out.setId = await issueSet({ userId, bank, itemIds: picked.map((r) => r.id), kind });
+    out.kind = kind;
+  }
   return out;
 }
 
 /** Records exactly which questions this user was served. Answers can only be checked against this. */
-async function issueSet({ userId, bank, itemIds }) {
+async function enforceDailyCap(userId) {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase.from('content_sets').select('set_id').eq('user_id', userId).eq('bank', 'oir').gte('issued_at', since);
+  if (error) throw httpError(503, 'Could not start this set right now');
+  if ((data || []).length >= OIR_DAILY_SET_CAP) throw httpError(429, `You have started the maximum of ${OIR_DAILY_SET_CAP} OIR sets today. Try again tomorrow.`);
+}
+
+async function issueSet({ userId, bank, itemIds, kind }) {
   const { data, error } = await supabase
     .from('content_sets')
-    .insert({ user_id: userId, bank, item_ids: itemIds, expires_at: new Date(Date.now() + SET_TTL_MS).toISOString() })
+    .insert({ user_id: userId, bank, kind, size: itemIds.length, item_ids: itemIds, expires_at: new Date(Date.now() + SET_TTL_MS).toISOString() })
     .select('set_id')
     .maybeSingle();
   if (error || !data) throw httpError(503, 'Could not start this set right now');
@@ -131,7 +152,9 @@ async function getOirSetScore({ userId, setId }) {
   const set = await loadSet({ userId, setId });
   const answers = set.answers || {};
   const score = Object.values(answers).filter((a) => a && a.correct === true).length;
-  return { score, total: set.item_ids.length, answered: Object.keys(answers).length };
+  // total is the size fixed when the set was issued, so unanswered questions count against the score.
+  const ranked = set.kind === 'full' && set.size === OIR_FULL_SET_SIZE;
+  return { score, total: set.size, answered: Object.keys(answers).length, kind: set.kind, ranked };
 }
 
-module.exports = { BANKS, SET_TTL_MS, getRandomSet, checkOirAnswer, getOirSetScore, _clearCache: () => cache.clear() };
+module.exports = { BANKS, SET_TTL_MS, OIR_FULL_SET_SIZE, OIR_QUICK_SET_SIZE, OIR_DAILY_SET_CAP, getRandomSet, checkOirAnswer, getOirSetScore, _clearCache: () => cache.clear() };

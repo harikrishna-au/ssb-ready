@@ -54,6 +54,8 @@ async function runEvaluationPipeline(userId, testType, payload) {
         aiFeedback: feedbackMarkdown,
         score: evaluation.score,
         evaluation,
+        promptVersion: evaluation.meta?.promptVersion || null,
+        model: evaluation.meta?.model || null,
         completedAt: new Date()
       });
       const leaderboard = await fetchLeaderboard('wat_results', (doc) => {
@@ -82,10 +84,12 @@ async function runEvaluationPipeline(userId, testType, payload) {
         err.statusCode = 400;
         throw err;
       }
-      const { analysis } = await evaluateSdt(responses);
+      const { analysis, consistencyScore, meta } = await evaluateSdt(responses);
       return {
         testType: 'SDT',
         analysis,
+        consistencyScore,
+        meta,
         feedbackMarkdown: analysis,
         score: null,
         leaderboard: null,
@@ -108,6 +112,8 @@ async function runEvaluationPipeline(userId, testType, payload) {
         aiFeedback: feedbackMarkdown,
         score: evaluation.score,
         evaluation,
+        promptVersion: evaluation.meta?.promptVersion || null,
+        model: evaluation.meta?.model || null,
         completedAt: new Date()
       });
       const leaderboard = await fetchLeaderboard('srt_results', (doc) => {
@@ -134,8 +140,10 @@ async function runEvaluationPipeline(userId, testType, payload) {
       let score;
       let totalQuestions;
       let verified = false;
+      let ranked = false;
       if (payload.setId) {
-        ({ score, total: totalQuestions } = await getOirSetScore({ userId, setId: String(payload.setId) }));
+        // `total` is the size the server fixed at issue time; ranked only for full-size sets.
+        ({ score, total: totalQuestions, ranked } = await getOirSetScore({ userId, setId: String(payload.setId) }));
         verified = true;
       } else if (process.env.OIR_REJECT_UNVERIFIED === 'true') {
         const err = new Error('Please update the app to submit OIR results.');
@@ -164,6 +172,7 @@ ${
         totalQuestions,
         percentageScore: pct,
         verified,
+        ranked,
         aiFeedback: feedbackMarkdown,
         completedAt: new Date()
       };
@@ -184,8 +193,9 @@ ${
       } else {
         ref = await db.collection('oir_results').add(doc);
       }
-      const snap = await db.collection('oir_results').orderBy('percentageScore', 'desc').limit(40).get();
-      const leaderboard = snap.docs.filter((d) => d.data().verified === true).slice(0, 10).map((doc) => {
+      // Filtered in the query, so unranked rows (quick, legacy, partial) can never crowd out ranked ones.
+      const snap = await db.collection('oir_results').where('ranked', '==', true).orderBy('percentageScore', 'desc').limit(10).get();
+      const leaderboard = snap.docs.map((doc) => {
         const data = doc.data();
         return {
           id: doc.id,

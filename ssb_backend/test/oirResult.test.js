@@ -13,14 +13,14 @@ const fakeDb = {
       create: async (d) => { if (results.has(id)) throw Object.assign(new Error('ALREADY_EXISTS'), { code: 6 }); results.set(id, d); }
     }),
     add: async (d) => { const id = `auto${results.size}`; results.set(id, d); return { id }; },
-    orderBy: () => ({ limit: () => ({ get: async () => ({ docs: [...results].map(([id, d]) => ({ id, data: () => d })) }) }) })
+    where: (f, _op, v) => ({ orderBy: () => ({ limit: (n) => ({ get: async () => ({ docs: [...results].filter(([, d]) => d[f] === v).slice(0, n).map(([id, d]) => ({ id, data: () => d })) }) }) }) })
   })
 };
 const put = (rel, exports) => { const k = require.resolve(rel); require.cache[k] = { id: k, filename: k, loaded: true, exports }; };
 put('../config/firebase', { db: fakeDb, admin: {} });
 put('../config/supabase', {});
 put('../services/aiService', {});
-const serverScore = { score: 3, total: 10 };
+const serverScore = { score: 3, total: 10, ranked: true };
 put('../services/contentBank', { getOirSetScore: async ({ setId }) => { if (setId !== 'mine') throw Object.assign(new Error('nf'), { statusCode: 404 }); return serverScore; } });
 const { runEvaluationPipeline } = require('../services/evaluationOrchestrator');
 
@@ -51,4 +51,21 @@ test('unverified submissions can be switched off entirely', async () => {
   process.env.OIR_REJECT_UNVERIFIED = 'true';
   await assert.rejects(runEvaluationPipeline('u3', 'OIR', { score: 5, totalQuestions: 20 }), (e) => e.statusCode === 400);
   delete process.env.OIR_REJECT_UNVERIFIED;
+});
+
+test('quick (unranked) set result is stored but never enters the ranked leaderboard', async () => {
+  serverScore.ranked = false;
+  put('../services/contentBank', { getOirSetScore: async () => ({ score: 3, total: 10, ranked: false }) });
+  delete require.cache[require.resolve('../services/evaluationOrchestrator')];
+  const { runEvaluationPipeline: run } = require('../services/evaluationOrchestrator');
+  const r = await run('u9', 'OIR', { setId: 'quick1' });
+  assert.equal(results.get('quick1').ranked, false);
+  assert.ok(r.leaderboard.every((row) => row.id !== 'quick1'));
+});
+
+test('unranked rows never displace ranked ones in the leaderboard', async () => {
+  for (let i = 0; i < 15; i++) results.set(`junk${i}`, { ranked: false, percentageScore: 100, verified: false });
+  const r = await runEvaluationPipeline('u4', 'OIR', { score: 1, totalQuestions: 2 });
+  assert.ok(r.leaderboard.every((row) => !row.id.startsWith('junk')));
+  assert.ok(r.leaderboard.some((row) => row.id === 'mine'));
 });

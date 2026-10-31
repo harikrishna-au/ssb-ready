@@ -65,6 +65,8 @@ const runPpdtPipeline = asyncHandler(async (req, res) => {
     aiFeedback: ai.analysisMarkdown,
     identifiedOlqs: ai.olqs || [],
     score: Number(ai.score || 0),
+    promptVersion: ai.meta?.promptVersion || null,
+    model: ai.meta?.model || null,
     completedAt: new Date(),
     perception: perception || {}
   };
