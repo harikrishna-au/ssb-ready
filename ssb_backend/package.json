@@ -12,7 +12,9 @@
     "oir:import-images": "node scripts/import_oir_images.js",
     "psychology:import-images": "node scripts/import_psychology_images.js",
     "oir:purge": "node scripts/purge_oir_questions.js",
-    "oir:purge-images": "node scripts/purge_oir_questions.js --only-with-image"
+    "oir:purge-images": "node scripts/purge_oir_questions.js --only-with-image",
+    "test": "node --test test/",
+    "radar:seed": "node scripts/seed_radar.js"
   },
   "engines": {
     "node": ">=18"
