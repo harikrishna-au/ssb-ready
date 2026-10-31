@@ -10,6 +10,8 @@ const BANKS = {
 };
 // Never listed in any public field set: correct_answer_index, explanation.
 const INDEX_TTL_MS = 5 * 60 * 1000;
+/** An OIR set can be answered for this long after it is issued (the test itself is 10 minutes). */
+const SET_TTL_MS = 60 * 60 * 1000;
 const cache = new Map();
 
 const httpError = (status, message) => Object.assign(new Error(message), { statusCode: status });
@@ -73,19 +75,63 @@ async function getRandomSet({ bank, count, userId, tags }) {
     for (const k of def.extra || []) out[k] = r[k];
     return out;
   });
-  return { items, available: rows.length, repeated: Math.max(0, picked.length - unseen.length) };
+  const out = { items, available: rows.length, repeated: Math.max(0, picked.length - unseen.length) };
+  if (bank === 'oir') out.setId = await issueSet({ userId, bank, itemIds: picked.map((r) => r.id) });
+  return out;
 }
 
-/** Marks one OIR answer. The only place the correct index leaves the server, and only after the user committed. */
-async function checkOirAnswer({ questionId, index }) {
-  const i = Number(index);
-  if (typeof questionId !== 'string' || !Number.isInteger(i) || i < 0) throw httpError(400, 'questionId and a valid option index are required');
+/** Records exactly which questions this user was served. Answers can only be checked against this. */
+async function issueSet({ userId, bank, itemIds }) {
   const { data, error } = await supabase
-    .from('content_oir_questions').select('correct_answer_index, explanation, options').eq('id', questionId).maybeSingle();
-  if (error) throw httpError(503, 'Could not check that answer right now');
-  if (!data) throw httpError(404, 'Question not found');
-  if (i >= (data.options || []).length) throw httpError(400, 'Option out of range');
-  return { correct: i === data.correct_answer_index, correctIndex: data.correct_answer_index, explanation: data.explanation || null };
+    .from('content_sets')
+    .insert({ user_id: userId, bank, item_ids: itemIds, expires_at: new Date(Date.now() + SET_TTL_MS).toISOString() })
+    .select('set_id')
+    .maybeSingle();
+  if (error || !data) throw httpError(503, 'Could not start this set right now');
+  return data.set_id;
 }
 
-module.exports = { BANKS, getRandomSet, checkOirAnswer, _clearCache: () => cache.clear() };
+async function loadSet({ userId, setId }) {
+  if (typeof setId !== 'string' || !setId) throw httpError(400, 'setId is required');
+  const { data, error } = await supabase.from('content_sets').select('*').eq('set_id', setId).eq('user_id', userId).eq('bank', 'oir').maybeSingle();
+  if (error) throw httpError(503, 'Could not check that answer right now');
+  // Same message whether it never existed or belongs to someone else, so ids cannot be probed.
+  if (!data) throw httpError(404, 'That question set was not found');
+  return data;
+}
+
+/**
+ * Marks one OIR answer. Allowed only for a question in this user's own, unexpired set, once per question.
+ * The correct index leaves the server only after the answer is recorded.
+ */
+async function checkOirAnswer({ userId, setId, questionId, index }) {
+  const i = Number(index);
+  if (typeof questionId !== 'string' || !Number.isInteger(i) || i < 0) throw httpError(400, 'setId, questionId and a valid option index are required');
+  const set = await loadSet({ userId, setId });
+  if (new Date(set.expires_at) <= new Date()) throw httpError(410, 'This question set has expired. Start a new one.');
+  if (!set.item_ids.includes(questionId)) throw httpError(403, 'That question is not part of your set');
+  if (set.answers && set.answers[questionId]) throw httpError(409, 'You already answered that question');
+
+  const { data, error } = await supabase
+    .from('content_oir_questions').select('correct_answer_index, explanation, options')
+    .eq('id', questionId).eq('active', true).neq('review_status', 'rejected').maybeSingle();
+  if (error) throw httpError(503, 'Could not check that answer right now');
+  if (!data) throw httpError(404, 'That question is no longer available');
+  if (i >= (data.options || []).length) throw httpError(400, 'Option out of range');
+
+  const correct = i === data.correct_answer_index;
+  const rec = await supabase.rpc('content_record_answer', { p_set: setId, p_user: userId, p_question: questionId, p_index: i, p_correct: correct });
+  if (rec.error) throw httpError(503, 'Could not check that answer right now');
+  if (rec.data !== true) throw httpError(409, 'You already answered that question');
+  return { correct, correctIndex: data.correct_answer_index, explanation: data.explanation || null };
+}
+
+/** Server-computed OIR score for a set. Unanswered questions score zero. */
+async function getOirSetScore({ userId, setId }) {
+  const set = await loadSet({ userId, setId });
+  const answers = set.answers || {};
+  const score = Object.values(answers).filter((a) => a && a.correct === true).length;
+  return { score, total: set.item_ids.length, answered: Object.keys(answers).length };
+}
+
+module.exports = { BANKS, SET_TTL_MS, getRandomSet, checkOirAnswer, getOirSetScore, _clearCache: () => cache.clear() };

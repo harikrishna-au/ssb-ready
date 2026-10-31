@@ -6,11 +6,11 @@ const { getRandomSet, checkOirAnswer } = require('../services/contentBank');
 const router = express.Router();
 router.use(firebaseProtect);
 
-/** POST /api/content/oir/check  { questionId, index } -> { correct, correctIndex, explanation } */
+/** POST /api/content/oir/check  { setId, questionId, index } -> { correct, correctIndex, explanation } */
 router.post(
   '/oir/check',
   asyncHandler(async (req, res) => {
-    res.json({ success: true, ...(await checkOirAnswer(req.body || {})) });
+    res.json({ success: true, ...(await checkOirAnswer({ ...(req.body || {}), userId: req.firebaseUser.uid })) });
   })
 );
 

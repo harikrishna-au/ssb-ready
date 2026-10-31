@@ -24,26 +24,29 @@ export default function OirPage() {
   const [picked, setPicked] = useState<number | null>(null);
   const [revealed, setRevealed] = useState<Revealed | null>(null);
   const [checking, setChecking] = useState(false);
+  const [setId, setSetId] = useState("");
+  const setIdRef = useLatest(setId);
   const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const scoreRef = useLatest(score);
 
   const fetchQuestions = () =>
     fetchContent<OirItem>("oir", QUESTION_COUNT)
-      .then((r) => { setQuestions(r.items.map((i) => ({ id: i.id, text: i.text, options: i.options, image_url: i.image_url }))); setPhase("intro"); })
+      .then((r) => { setSetId(r.setId ?? ""); setQuestions(r.items.map((i) => ({ id: i.id, text: i.text, options: i.options, image_url: i.image_url }))); setPhase("intro"); })
       .catch((e) => { setError(e instanceof Error ? e.message : "Could not load questions"); setPhase("error"); });
   const retry = () => { setPhase("loading"); void fetchQuestions(); };
   useEffect(() => { void fetchQuestions(); }, []);
 
-  const finish = async (finalScore = scoreRef.current) => {
+  const finish = async () => {
     setPhase("analyzing");
     try {
-      const r = await api.post<{ feedbackMarkdown?: string }>("/api/evaluation/run", {
+      // Only the set id is sent: the server counts the answers it checked.
+      const r = await api.post<{ feedbackMarkdown?: string; evaluation?: { score: number } }>("/api/evaluation/run", {
         testType: "OIR",
-        payload: { score: finalScore, totalQuestions: questions.length },
+        payload: { setId: setIdRef.current },
       });
       setFeedback(r.feedbackMarkdown ?? null);
+      if (typeof r.evaluation?.score === "number") setScore(r.evaluation.score);
     } catch {
       setFeedback(null); // the result is still shown, like the mobile app
     }
@@ -57,7 +60,7 @@ export default function OirPage() {
     if (picked !== null || !q || checking) return;
     setPicked(i);
     setChecking(true);
-    checkOirAnswer(q.id, i)
+    checkOirAnswer(setIdRef.current, q.id, i)
       .then((r) => {
         setRevealed({ correctIndex: r.correctIndex, explanation: r.explanation });
         if (r.correct) setScore((s) => s + 1);
@@ -70,7 +73,7 @@ export default function OirPage() {
     setPicked(null);
     setRevealed(null);
     if (index + 1 < questions.length) setIndex(index + 1);
-    else finish(scoreRef.current);
+    else finish();
   };
 
   // Keyboard: A–D or 1–4 to answer, Enter for next.
