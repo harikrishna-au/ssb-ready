@@ -12,6 +12,8 @@ const ppdtRoutes = require('./routes/ppdtRoutes');
 const tatRoutes = require('./routes/tatRoutes');
 const evaluationPipelineRoutes = require('./routes/evaluationPipelineRoutes');
 const legalRoutes = require('./routes/legalRoutes');
+const paymentsRoutes = require('./routes/paymentsRoutes');
+const meRoutes = require('./routes/meRoutes');
 
 function createApp() {
   const app = express();
@@ -22,6 +24,8 @@ function createApp() {
       credentials: true
     })
   );
+  // Must come before express.json: the webhook signature covers the raw request bytes.
+  app.use('/api/payments/webhook', paymentsRoutes.webhook);
   app.use(express.json({ limit: config.jsonBodyLimit }));
   app.use(express.urlencoded({ extended: true }));
   app.use(requestContext);
@@ -55,6 +59,8 @@ function createApp() {
   app.use('/api/tat', tatRoutes);
   app.use('/api/interview', interviewRoutes);
   app.use('/api/images', imageRoutes);
+  app.use('/api/payments', paymentsRoutes);
+  app.use('/api/me', meRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

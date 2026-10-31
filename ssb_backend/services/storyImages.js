@@ -1,6 +1,7 @@
 const supabase = require('../config/supabase');
 const { config } = require('../config');
 const { logger } = require('../utils/logger');
+const { isPremium } = require('./premium');
 
 const BUCKET = (process.env.PSYCHOLOGY_IMAGE_BUCKET || 'ppdt-tat-images').trim();
 const FOLDER = 'ppdt';
@@ -53,19 +54,6 @@ async function loadIndex() {
   rows.sort(byNumber);
   indexCache = { at: Date.now(), rows };
   return rows;
-}
-
-async function isPremium(userId) {
-  if (!userId) return false;
-  const { data, error } = await supabase
-    .from('premium_members')
-    .select('subscription_status, premium_expires_at')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (error || !data) return false; // fail closed: anything unclear counts as free
-  const active = data.subscription_status === 'active';
-  const notExpired = !data.premium_expires_at || new Date(data.premium_expires_at) > new Date();
-  return active && notExpired;
 }
 
 function shuffle(arr) {
