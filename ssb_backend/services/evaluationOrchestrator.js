@@ -60,8 +60,8 @@ async function runEvaluationPipeline(userId, testType, payload) {
         return {
           id: doc.id,
           score: Number(data.score || 0),
-          storyPreview: responsesPreview(data.responses || {}),
-          feedbackSummary: String(data.aiFeedback || '').slice(0, 180)
+          storyPreview: data.userId === userId ? responsesPreview(data.responses || {}) : '',
+          feedbackSummary: data.userId === userId ? String(data.aiFeedback || '').slice(0, 180) : ''
         };
       });
       return {
@@ -114,8 +114,8 @@ async function runEvaluationPipeline(userId, testType, payload) {
         return {
           id: doc.id,
           score: Number(data.score || 0),
-          storyPreview: responsesPreview(data.responses || {}),
-          feedbackSummary: String(data.aiFeedback || '').slice(0, 180)
+          storyPreview: data.userId === userId ? responsesPreview(data.responses || {}) : '',
+          feedbackSummary: data.userId === userId ? String(data.aiFeedback || '').slice(0, 180) : ''
         };
       });
       return {

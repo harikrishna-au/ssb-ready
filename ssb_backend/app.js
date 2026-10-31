@@ -1,7 +1,6 @@
 const express = require('express');
-const cors = require('cors');
-const { config, getCorsOriginOption } = require('./config');
-const { requestContext } = require('./middleware/requestContext');
+const { config } = require('./config');
+const { applyPlatform } = require('./middleware/platform');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 const interviewRoutes = require('./routes/interviewRoutes');
 const imageRoutes = require('./routes/imageRoutes');
@@ -12,19 +11,13 @@ const ppdtRoutes = require('./routes/ppdtRoutes');
 const tatRoutes = require('./routes/tatRoutes');
 const evaluationPipelineRoutes = require('./routes/evaluationPipelineRoutes');
 const legalRoutes = require('./routes/legalRoutes');
+const accountRoutes = require('./routes/accountRoutes');
 
 function createApp() {
   const app = express();
 
-  app.use(
-    cors({
-      origin: getCorsOriginOption(),
-      credentials: true
-    })
-  );
-  app.use(express.json({ limit: config.jsonBodyLimit }));
-  app.use(express.urlencoded({ extended: true }));
-  app.use(requestContext);
+  // Security headers, CORS allow-list, body limits, rate limits, auth + validation policy, request ids and logs.
+  applyPlatform(app);
 
   app.get('/', (req, res) => {
     const proto = req.get('x-forwarded-proto') || req.protocol;
@@ -55,6 +48,7 @@ function createApp() {
   app.use('/api/tat', tatRoutes);
   app.use('/api/interview', interviewRoutes);
   app.use('/api/images', imageRoutes);
+  app.use('/api/account', accountRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

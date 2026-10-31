@@ -3,6 +3,7 @@ const { loadEnv, config } = require('./config');
 const { logger } = require('./utils/logger');
 
 loadEnv();
+require('./middleware/sentry').initSentry();
 const app = createApp();
 
 const server = app.listen(config.port, config.host, () => {
@@ -23,3 +24,10 @@ const gracefulShutdown = (signal) => {
 
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
+// Never let a stray rejection kill the process silently; log it (scrubbed) and keep serving.
+process.on('unhandledRejection', (reason) => logger.error('unhandledRejection', { err: reason }));
+process.on('uncaughtException', (err) => {
+  logger.error('uncaughtException', { err });
+  process.exit(1);
+});
