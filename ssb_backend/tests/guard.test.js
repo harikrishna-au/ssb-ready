@@ -23,7 +23,8 @@ function listRoutes(stack, prefix = '') {
 }
 
 // The Razorpay webhook has no user session by design: it is authenticated by its HMAC signature.
-const PUBLIC = [/^\/api\/health/, /^\/api\/payments\/webhook/];
+// Radar's public surface is read-only published data, feeds, calendar files and one-click email links.
+const PUBLIC = [/^\/api\/health/, /^\/api\/payments\/webhook/, /^\/api\/radar\/?$/, /^\/api\/radar\/(feed\.json|feed\.xml|calendar\.ics|unsubscribe|confirm)$/, /^\/api\/radar\/:id\/calendar\.ics$/, /^\/api\/radar\/cron\/(reminders|watch)$/]; // cron routes: shared secret, 401 when it is unset.
 
 test('FAIL CLOSED: every route under /api is guarded unless explicitly public', () => {
   const routes = listRoutes(createApp()._router.stack).filter((r) => r.path.startsWith('/api'));

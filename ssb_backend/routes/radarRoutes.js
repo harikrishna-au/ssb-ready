@@ -1,5 +1,6 @@
 'use strict';
 const express = require('express');
+const { guard } = require('../middleware/guard');
 const crypto = require('crypto');
 const core = require('../services/radarCore');
 const { asyncHandler } = require('../middleware/asyncHandler');
@@ -39,6 +40,9 @@ async function defaultEmailOf(uid) {
 function createRadarRouter(deps = {}) {
   const getStore = deps.getStore || (() => require('../services/radarStore').getStore());
   const authMw = deps.auth || defaultAuth;
+  // Real server: the shared per-route guard (auth + rate limit). Tests may inject their own login,
+  // which still has to carry the marker the fail-closed test looks for.
+  const gated = (limits = ['write']) => (deps.auth ? [deps.auth, Object.assign((_q, _r, n) => n(), { isGuard: true })] : guard({ limits }));
   const isAdmin = deps.isAdmin || defaultIsAdmin;
   const emailOf = deps.emailOf || defaultEmailOf;
   const nowMs = deps.nowMs || (() => Date.now());
@@ -53,7 +57,7 @@ function createRadarRouter(deps = {}) {
       onChange: async (n, changes) => { await reminders.notifyChange({ store, mailer, nowMs: nowMs() }, n, changes); },
     });
   };
-  const adminOnly = [authMw, asyncHandler(async (req, _res, next) => {
+  const adminOnly = [...gated(['write']), asyncHandler(async (req, _res, next) => {
     if (!(await isAdmin(req.firebaseUser.uid))) throw httpError(403, 'Admins only.');
     next();
   })];
@@ -107,23 +111,23 @@ function createRadarRouter(deps = {}) {
   }));
 
   // ---- signed-in user: tracker + prefs ----------------------------------
-  router.get('/tracker', authMw, asyncHandler(async (req, res) => {
+  router.get('/tracker', ...gated(), asyncHandler(async (req, res) => {
     res.json({ success: true, ...(await svc().getTracker(req.firebaseUser.uid)) });
   }));
-  router.put('/tracker/:id', authMw, asyncHandler(async (req, res) => {
+  router.put('/tracker/:id', ...gated(), asyncHandler(async (req, res) => {
     const { status, note } = req.body || {};
     res.json({ success: true, entry: await svc().setTracked(req.firebaseUser.uid, req.params.id, { status, note }) });
   }));
-  router.delete('/tracker/:id', authMw, asyncHandler(async (req, res) => {
+  router.delete('/tracker/:id', ...gated(), asyncHandler(async (req, res) => {
     await svc().removeTracked(req.firebaseUser.uid, req.params.id);
     res.json({ success: true });
   }));
-  router.post('/tracker/import', authMw, asyncHandler(async (req, res) => {
+  router.post('/tracker/import', ...gated(), asyncHandler(async (req, res) => {
     res.json({ success: true, ...(await svc().importLegacy(req.firebaseUser.uid, req.body?.apps)) });
   }));
 
   const prefsOut = (p) => ({ remindersEnabled: p.remindersEnabled, digest: p.digest, hasEmail: !!p.email, confirmed: !!p.email && p.emailConfirmedFor === p.email, timezone: p.timezone });
-  router.get('/prefs', authMw, asyncHandler(async (req, res) => {
+  router.get('/prefs', ...gated(), asyncHandler(async (req, res) => {
     res.json({ success: true, prefs: prefsOut(await svc().getPrefs(req.firebaseUser.uid)) });
   }));
 
@@ -137,7 +141,7 @@ function createRadarRouter(deps = {}) {
     if (u.email_verified !== undefined) return u.email_verified === true && u.email ? u.email : '';
     return emailOf(u.uid);
   }
-  router.put('/prefs', authMw, asyncHandler(async (req, res) => {
+  router.put('/prefs', ...gated(), asyncHandler(async (req, res) => {
     const uid = req.firebaseUser.uid;
     const wantsMail = req.body?.remindersEnabled === true || req.body?.digest === true;
     const email = await verifiedEmail(req);
