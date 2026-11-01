@@ -539,8 +539,12 @@ serve(async (req: Request) => {
       const status = slot.data && typeof slot.data === "object" ? (slot.data as { status?: string }).status : undefined;
       if (slot.error || !status) return tryLater();
       if (status === "full") return jsonResponse({ error: "That code has reached its limit." }, 400);
-      // Only a slot THIS request just took may be released if the grant fails, and only that exact row.
-      const reservedId = status === "reserved" ? Number((slot.data as { id: number }).id) : null;
+      // "already" never grants. Someone who holds a redemption (finished, in progress in another request,
+      // or kept after a revocation) must not be able to claim premium again with any code.
+      if (status === "already") return jsonResponse({ error: "This account has already used a code." }, 409);
+      if (status !== "reserved") return tryLater();
+      // The slot THIS request just took: the only row it may release if the grant fails.
+      const reservedId = Number((slot.data as { id: number }).id);
 
       const email = normalizeText(body.email) || authUser.email;
       const username = buildUsername(email, normalizeText(body.username) || authUser.name);
@@ -552,10 +556,8 @@ serve(async (req: Request) => {
       } catch (grantError) {
         // Give back exactly the slot this request took, so a failed grant does not use up the code.
         // A failed release only makes the cap stricter, never looser, so it is logged and not retried here.
-        if (reservedId !== null) {
-          const released = await admin.from("payment_events").delete().eq("id", reservedId);
-          if (released.error) console.error("[lifetime-premium] could not release coupon slot", reservedId, released.error);
-        }
+        const released = await admin.from("payment_events").delete().eq("id", reservedId);
+        if (released.error) console.error("[lifetime-premium] could not release coupon slot", reservedId, released.error);
         throw grantError;
       }
       await syncProfile(token, {
