@@ -516,44 +516,42 @@ serve(async (req: Request) => {
       const ids = await linkedIds(admin, authUser.uid);
       if (await hasPremium(admin, ids)) return jsonResponse({ success: true, status: "paid", isPremium: true, alreadyPremium: true });
 
-      // Throttle guessing. The attempt is recorded FIRST and the decision is made on a count that includes it,
-      // so a burst of parallel requests cannot all read "no attempts yet". Any database error fails closed.
-      const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      // Throttle guessing in one locked database step (see migration 20261103000300). Requests that are
+      // already blocked are not counted, so they cannot use up the shared allowance. Errors fail closed.
       const tryLater = () => jsonResponse({ error: "Could not process that right now. Please try again shortly." }, 503);
-      const { error: attemptError } = await admin.from("payment_events").insert({ user_id: authUser.uid, kind: "coupon_attempt" });
-      if (attemptError) return tryLater();
-      const [mine, everyone] = await Promise.all([
-        admin.from("payment_events").select("id", { count: "exact", head: true })
-          .eq("user_id", authUser.uid).eq("kind", "coupon_attempt").gte("created_at", since),
-        admin.from("payment_events").select("id", { count: "exact", head: true })
-          .eq("kind", "coupon_attempt").gte("created_at", since),
-      ]);
-      if (mine.error || everyone.error) return tryLater();
-      if ((mine.count ?? 0) > COUPON_MAX_ATTEMPTS_PER_USER_PER_HOUR || (everyone.count ?? 0) > COUPON_MAX_ATTEMPTS_ALL_USERS_PER_HOUR) {
-        return jsonResponse({ error: "Too many attempts. Try again in an hour." }, 429);
-      }
+      const gate = await admin.rpc("coupon_attempt", {
+        p_user: authUser.uid,
+        p_user_max: COUPON_MAX_ATTEMPTS_PER_USER_PER_HOUR,
+        p_global_max: COUPON_MAX_ATTEMPTS_ALL_USERS_PER_HOUR,
+      });
+      if (gate.error || typeof gate.data !== "string") return tryLater();
+      if (gate.data === "user_limited") return jsonResponse({ error: "Too many attempts. Try again in an hour." }, 429);
+      if (gate.data === "global_limited") return jsonResponse({ error: "Coupons are busy right now. Please try again later." }, 429);
+      if (gate.data !== "ok") return tryLater();
 
       const code = normalizeCoupon(body.code);
       const id = code ? await matchCoupon(code) : null;
       if (!id) return jsonResponse({ error: "That code is not valid." }, 400);
 
-      // A leaked code must not grant unlimited free accounts: each code has a redemption cap.
-      const used = await admin.from("payment_events").select("id", { count: "exact", head: true })
-        .eq("kind", "coupon_redeemed").filter("detail->>coupon", "eq", id);
-      if (used.error) return tryLater();
-      if ((used.count ?? 0) >= COUPON_MAX_REDEMPTIONS_PER_CODE) {
-        return jsonResponse({ error: "That code has reached its limit." }, 400);
-      }
+      // A leaked code must not grant unlimited free accounts. Reserve one redemption atomically BEFORE granting;
+      // the reservation row is the redemption record. If the grant fails we release it again.
+      const slot = await admin.rpc("coupon_reserve", { p_coupon: id, p_user: authUser.uid, p_max: COUPON_MAX_REDEMPTIONS_PER_CODE });
+      if (slot.error || typeof slot.data !== "boolean") return tryLater();
+      if (!slot.data) return jsonResponse({ error: "That code has reached its limit." }, 400);
 
       const email = normalizeText(body.email) || authUser.email;
       const username = buildUsername(email, normalizeText(body.username) || authUser.name);
-      await updatePremiumProfile({
-        uid: authUser.uid, email, username,
-        orderId: `coupon_${id}`, paymentId: `coupon_${id}`, amountInr: 0,
-      });
-      await admin.from("payment_events").insert({
-        user_id: authUser.uid, kind: "coupon_redeemed", to_status: "paid", detail: { coupon: id },
-      });
+      try {
+        await updatePremiumProfile({
+          uid: authUser.uid, email, username,
+          orderId: `coupon_${id}`, paymentId: `coupon_${id}`, amountInr: 0,
+        });
+      } catch (grantError) {
+        // Give the slot back so a failed grant does not use up the code.
+        await admin.from("payment_events").delete()
+          .eq("kind", "coupon_redeemed").eq("user_id", authUser.uid).filter("detail->>coupon", "eq", id);
+        throw grantError;
+      }
       await syncProfile(token, {
         userId: authUser.uid, email, username, isPremium: true, planType: PLAN_TYPE,
         premiumAmount: 0, premiumListPrice: LIST_PRICE_INR, premiumDiscount: LIST_PRICE_INR,
