@@ -533,11 +533,14 @@ serve(async (req: Request) => {
       const id = code ? await matchCoupon(code) : null;
       if (!id) return jsonResponse({ error: "That code is not valid." }, 400);
 
-      // A leaked code must not grant unlimited free accounts. Reserve one redemption atomically BEFORE granting;
-      // the reservation row is the redemption record. If the grant fails we release it again.
+      // A leaked code must not grant unlimited free accounts. Reserve one redemption atomically BEFORE granting.
+      // One redemption per person: a repeat request gets status "already" and takes no new slot.
       const slot = await admin.rpc("coupon_reserve", { p_coupon: id, p_user: authUser.uid, p_max: COUPON_MAX_REDEMPTIONS_PER_CODE });
-      if (slot.error || typeof slot.data !== "boolean") return tryLater();
-      if (!slot.data) return jsonResponse({ error: "That code has reached its limit." }, 400);
+      const status = slot.data && typeof slot.data === "object" ? (slot.data as { status?: string }).status : undefined;
+      if (slot.error || !status) return tryLater();
+      if (status === "full") return jsonResponse({ error: "That code has reached its limit." }, 400);
+      // Only a slot THIS request just took may be released if the grant fails, and only that exact row.
+      const reservedId = status === "reserved" ? Number((slot.data as { id: number }).id) : null;
 
       const email = normalizeText(body.email) || authUser.email;
       const username = buildUsername(email, normalizeText(body.username) || authUser.name);
@@ -547,9 +550,12 @@ serve(async (req: Request) => {
           orderId: `coupon_${id}`, paymentId: `coupon_${id}`, amountInr: 0,
         });
       } catch (grantError) {
-        // Give the slot back so a failed grant does not use up the code.
-        await admin.from("payment_events").delete()
-          .eq("kind", "coupon_redeemed").eq("user_id", authUser.uid).filter("detail->>coupon", "eq", id);
+        // Give back exactly the slot this request took, so a failed grant does not use up the code.
+        // A failed release only makes the cap stricter, never looser, so it is logged and not retried here.
+        if (reservedId !== null) {
+          const released = await admin.from("payment_events").delete().eq("id", reservedId);
+          if (released.error) console.error("[lifetime-premium] could not release coupon slot", reservedId, released.error);
+        }
         throw grantError;
       }
       await syncProfile(token, {
