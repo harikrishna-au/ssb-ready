@@ -184,7 +184,9 @@ const OPEN_ORDER_REUSE_MS = 30 * 60 * 1000;
 
 // ---------------------------------------------------------------- coupon codes (payment bypass)
 
-const COUPON_MAX_FAILS_PER_HOUR = 5;
+const COUPON_MAX_ATTEMPTS_PER_USER_PER_HOUR = 5;
+const COUPON_MAX_ATTEMPTS_ALL_USERS_PER_HOUR = 60; // blunts guessing spread across many accounts
+const COUPON_MAX_REDEMPTIONS_PER_CODE = Number(Deno.env.get("COUPON_MAX_REDEMPTIONS_PER_CODE") || 50);
 
 async function sha256Hex(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
@@ -514,19 +516,33 @@ serve(async (req: Request) => {
       const ids = await linkedIds(admin, authUser.uid);
       if (await hasPremium(admin, ids)) return jsonResponse({ success: true, status: "paid", isPremium: true, alreadyPremium: true });
 
-      // Throttle guessing: failed attempts are logged, and too many in the last hour lock this user out for a while.
+      // Throttle guessing. The attempt is recorded FIRST and the decision is made on a count that includes it,
+      // so a burst of parallel requests cannot all read "no attempts yet". Any database error fails closed.
       const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      const { count } = await admin.from("payment_events").select("id", { count: "exact", head: true })
-        .eq("user_id", authUser.uid).eq("kind", "coupon_failed").gte("created_at", since);
-      if ((count ?? 0) >= COUPON_MAX_FAILS_PER_HOUR) {
+      const tryLater = () => jsonResponse({ error: "Could not process that right now. Please try again shortly." }, 503);
+      const { error: attemptError } = await admin.from("payment_events").insert({ user_id: authUser.uid, kind: "coupon_attempt" });
+      if (attemptError) return tryLater();
+      const [mine, everyone] = await Promise.all([
+        admin.from("payment_events").select("id", { count: "exact", head: true })
+          .eq("user_id", authUser.uid).eq("kind", "coupon_attempt").gte("created_at", since),
+        admin.from("payment_events").select("id", { count: "exact", head: true })
+          .eq("kind", "coupon_attempt").gte("created_at", since),
+      ]);
+      if (mine.error || everyone.error) return tryLater();
+      if ((mine.count ?? 0) > COUPON_MAX_ATTEMPTS_PER_USER_PER_HOUR || (everyone.count ?? 0) > COUPON_MAX_ATTEMPTS_ALL_USERS_PER_HOUR) {
         return jsonResponse({ error: "Too many attempts. Try again in an hour." }, 429);
       }
 
       const code = normalizeCoupon(body.code);
       const id = code ? await matchCoupon(code) : null;
-      if (!id) {
-        await admin.from("payment_events").insert({ user_id: authUser.uid, kind: "coupon_failed" });
-        return jsonResponse({ error: "That code is not valid." }, 400);
+      if (!id) return jsonResponse({ error: "That code is not valid." }, 400);
+
+      // A leaked code must not grant unlimited free accounts: each code has a redemption cap.
+      const used = await admin.from("payment_events").select("id", { count: "exact", head: true })
+        .eq("kind", "coupon_redeemed").filter("detail->>coupon", "eq", id);
+      if (used.error) return tryLater();
+      if ((used.count ?? 0) >= COUPON_MAX_REDEMPTIONS_PER_CODE) {
+        return jsonResponse({ error: "That code has reached its limit." }, 400);
       }
 
       const email = normalizeText(body.email) || authUser.email;
