@@ -2,7 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
-import { ApiError, api } from "@/lib/api";
+import { ApiError, payments } from "@/lib/api";
 import { LEGAL } from "@/lib/legal";
 import { usePremium } from "@/lib/use-premium";
 import { loadRazorpay, type RazorpayResponse } from "./razorpay";
@@ -27,7 +27,7 @@ export function Checkout() {
   async function waitForPaid(orderId: string) {
     for (let i = 0; i < 8; i++) {
       try {
-        const s = await api.get<{ status: string }>(`/api/payments/order/${orderId}`);
+        const s = await payments<{ status: string }>({ action: "order_status", order_id: orderId });
         if (s.status === "paid") return true;
       } catch { /* keep trying */ }
       await wait(2000);
@@ -52,7 +52,7 @@ export function Checkout() {
     setPhase("confirming");
     let verified = false;
     try {
-      const out = await api.post<{ status: string }>("/api/payments/verify", r);
+      const out = await payments<{ status: string }>({ action: "verify_payment", ...r });
       verified = out.status === "paid";
     } catch (e) {
       if (e instanceof ApiError && e.status === 400) {
@@ -72,7 +72,7 @@ export function Checkout() {
     setPhase("starting");
     setMessage("");
     try {
-      const [order, Razorpay] = await Promise.all([api.post<OrderOut>("/api/payments/order", {}), loadRazorpay()]);
+      const [order, Razorpay] = await Promise.all([payments<OrderOut>({ action: "create_order" }), loadRazorpay()]);
       paidRef.current = false;
       const rzp = new Razorpay({
         key: order.keyId,
@@ -100,6 +100,27 @@ export function Checkout() {
     }
   }
 
+  const [coupon, setCoupon] = useState("");
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [couponError, setCouponError] = useState("");
+
+  async function redeem(e: React.FormEvent) {
+    e.preventDefault();
+    if (!coupon.trim() || couponBusy || busy.current) return;
+    setCouponBusy(true);
+    setCouponError("");
+    try {
+      await payments({ action: "redeem_coupon", code: coupon });
+      await refresh();
+      setPhase("done");
+    } catch (err) {
+      setCouponError(err instanceof Error ? err.message : "Could not apply that code.");
+    } finally {
+      setCouponBusy(false);
+    }
+  }
+
   const working = phase === "starting" || phase === "confirming";
   return (
     <div className="mt-3">
@@ -113,6 +134,30 @@ export function Checkout() {
         {phase === "confirming" ? "Confirming payment…" : phase === "starting" ? "Starting…" : phase === "cancelled" || phase === "failed" ? `Try again, pay ${LEGAL.price}` : `Pay ${LEGAL.price}`}
       </button>
       <p className="mt-2 text-xs text-muted-foreground">Secure checkout by Razorpay. UPI, cards and netbanking. One payment, no renewal.</p>
+      {phase !== "done" && (
+        <div className="mt-4 text-sm">
+          {!couponOpen ? (
+            <button type="button" onClick={() => setCouponOpen(true)} className="text-primary underline underline-offset-2">Have a coupon code?</button>
+          ) : (
+            <form onSubmit={(e) => void redeem(e)} className="flex max-w-sm gap-2">
+              <input
+                value={coupon}
+                onChange={(e) => setCoupon(e.target.value)}
+                placeholder="Coupon code"
+                aria-label="Coupon code"
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                className="h-10 min-w-0 flex-1 rounded-full border border-white/15 bg-transparent px-4 uppercase tracking-wide focus-visible:outline-2 focus-visible:outline-brass"
+              />
+              <button type="submit" disabled={couponBusy || !coupon.trim()} className="inline-flex h-10 items-center gap-2 rounded-full border border-white/15 px-5 font-semibold hover:border-white/40 disabled:opacity-60">
+                {couponBusy && <Loader2 className="size-4 animate-spin" aria-hidden />}Apply
+              </button>
+            </form>
+          )}
+          {couponError && <p role="alert" className="mt-2 text-destructive">{couponError}</p>}
+        </div>
+      )}
       <div aria-live="polite" className="mt-3 text-sm">
         {phase === "cancelled" && <p className="text-muted-foreground">Payment cancelled. Nothing was charged. You can try again whenever you are ready.</p>}
         {phase === "confirming" && <p className="text-muted-foreground">Please keep this page open while we confirm your payment.</p>}

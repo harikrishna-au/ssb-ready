@@ -1,3 +1,16 @@
+# AWS Lambda (current production backend)
+
+- **Where:** AWS account `384875140113`, region **`ap-southeast-2` (Sydney)**. Mumbai and other regions are blocked by the organization's policy.
+- **What:** one Lambda function `readykadet-api` (Node 22, ARM, 512 MB, 60 s) behind a free public Function URL. Entry file: `lambda.js`. Role: `readykadet-api-role` (logging only). Logs kept 14 days.
+- **URL:** `https://ajqqwsb247x3hpmugniuho37p40wbkcs.lambda-url.ap-southeast-2.on.aws` (set this as `NEXT_PUBLIC_BACKEND_URL` in Vercel, no trailing slash).
+- **Update the code:** `scripts/deploy_lambda.sh`. Also push settings from `.env`: `scripts/deploy_lambda.sh --env`. Use the `aws-project` profile (`aws login --profile aws-project`).
+- **Other project in the same account:** `communication-backend` stack and `communication-assessment-api` function belong to something else. Do not touch them.
+- **Settings** live on the function (never in the zip). `CORS_ORIGIN` is the Vercel site only. `CRON_SECRET` protects the scheduled-job routes.
+- **Cost:** pay-per-request; the monthly free allowance covers a small app. Idle costs nothing. Add a budget alert.
+- **Limits:** rate limits count per running copy, not across copies. A first request after a quiet spell takes about 2 s. Sydney is far from India, so each request adds a few hundred ms.
+
+---
+
 # Deploying `ssb_backend`
 
 ## Environment variables
@@ -11,19 +24,16 @@ All settings are read via **`config/index.js`** (single source of truth). Set at
 | `PUBLIC_URL` | Public HTTPS base URL of **this** API (no trailing slash). Returned in `GET /` as `publicUrl` — **do not hardcode deployment URLs in application code**. Alias: `BACKEND_PUBLIC_URL`. |
 | `CORS_ORIGIN` | Comma-separated allowed origins (full origin strings, not paths). |
 | `JSON_BODY_LIMIT` | Express JSON limit (default `15mb`) |
-| `SUPABASE_URL` / `SUPABASE_KEY` | Supabase client routes (if used) |
+| `SUPABASE_URL` | Your Supabase project address |
 | `JWT_SECRET` | Required by app bootstrap |
 | `OPENAI_API_KEY` | AI / OCR / pipelines |
 | `OPENAI_MODEL` | e.g. `gpt-4o-mini` |
 | `OPENAI_VISION_MODEL` | Optional; defaults to `OPENAI_MODEL` |
 | `AI_PROMPT_MAX_CHARS` | Max chars sent to OpenAI per prompt |
-| `FIREBASE_PROJECT_ID` | Firebase Admin |
-| `FIREBASE_SERVICE_ACCOUNT_JSON` | Full service account JSON (e.g. Render secret); alternative to file-based credentials |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account JSON **or** use default credentials on GCP |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Required.** The service-role key. User data lives in a private table, so the public anon key cannot be used. |
+| `CLERK_SECRET_KEY` | **Required.** Verifies every login (Clerk session token). |
 
-For Firebase Admin in production, **`FIREBASE_SERVICE_ACCOUNT_JSON` is required** on Render and similar hosts: without it, `firebase-admin` has no credentials and Firestore calls fail with *“Could not load the default credentials”* (often seen in the mobile app after login). Download a service account key from Firebase Console → Project settings → Service accounts → Generate new private key, minify JSON to one line, and set as a **Secret** env var on Render.
-
-Alternatively use a mounted JSON file and `GOOGLE_APPLICATION_CREDENTIALS`.
+User data (results, history, PIQ) is stored in Supabase through the service-role key. Logins are Clerk only; there is no Firebase.
 
 ## Docker
 
@@ -59,16 +69,13 @@ Point the Flutter app `BACKEND_URL` to your HTTPS API base (no trailing slash), 
    | `PORT` | **Do not set** — Render injects `PORT`. `server.js` already uses it. |
    | `OPENAI_API_KEY` | Required for AI / OCR / evaluation. |
    | `JWT_SECRET` | Required by app bootstrap (`config/env.js`). |
-   | `SUPABASE_URL` / `SUPABASE_KEY` | Required if you use Supabase-backed routes / readiness DB check. |
-   | `FIREBASE_PROJECT_ID` | Firebase project. |
-   | `FIREBASE_SERVICE_ACCOUNT_JSON` | **Paste the full service account JSON as one line** (mark **Secret**). Needed for Firestore Admin on Render. |
-   | `FIREBASE_STORAGE_BUCKET` | Optional; set if you use Storage URLs. |
+   | `SUPABASE_URL` | Required. Your Supabase project address. |
+   | `SUPABASE_SERVICE_ROLE_KEY` | **Required (secret).** Service-role key for the user-data table. |
+   | `CLERK_SECRET_KEY` | **Required (secret).** Verifies logins. |
    | `CORS_ORIGIN` | Comma-separated origins, e.g. `https://yourapp.web.app,http://localhost:8080` |
 
-4. **Firebase credential on Render**  
-   Download a service account key from Firebase Console → Project settings → Service accounts.  
-   Minify JSON to a single line and add as **`FIREBASE_SERVICE_ACCOUNT_JSON`** (secret).  
-   Alternatively use **Docker** on Render and mount a file; then set `GOOGLE_APPLICATION_CREDENTIALS` in the container.
+4. **Keys on Render**  
+   Add `SUPABASE_SERVICE_ROLE_KEY` and `CLERK_SECRET_KEY` as secrets. There is no other credential to configure.
 
 5. **Docker on Render**  
    Optional: create a **Web Service** with **Docker**, context `ssb_backend`, use the existing [`Dockerfile`](./Dockerfile). Pass the same env vars; map secrets via Render’s **Secret Files** if you prefer a key file over JSON-in-env.

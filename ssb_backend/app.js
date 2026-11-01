@@ -6,7 +6,7 @@ const interviewRoutes = require('./routes/interviewRoutes');
 const imageRoutes = require('./routes/imageRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const evaluationRoutes = require('./routes/evaluationRoutes');
-const firestoreRoutes = require('./routes/firestoreRoutes');
+const dataRoutes = require('./routes/dataRoutes');
 const ppdtRoutes = require('./routes/ppdtRoutes');
 const tatRoutes = require('./routes/tatRoutes');
 const evaluationPipelineRoutes = require('./routes/evaluationPipelineRoutes');
@@ -52,7 +52,7 @@ function createApp() {
   app.use('/api/health', healthRoutes);
   app.use('/api/evaluate', evaluationRoutes);
   app.use('/api/evaluation', evaluationPipelineRoutes);
-  app.use('/api/firestore', firestoreRoutes);
+  app.use('/api/data', dataRoutes);
   app.use('/api/ppdt', ppdtRoutes);
   app.use('/api/tat', tatRoutes);
   app.use('/api/interview', interviewRoutes);

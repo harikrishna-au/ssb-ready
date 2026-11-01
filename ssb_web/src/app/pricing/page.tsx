@@ -67,18 +67,18 @@ export default function Pricing() {
             <h2 id="free-h" className="text-3xl font-extrabold uppercase">Free</h2>
             <p className="mt-1 font-display text-5xl font-black">₹0</p>
             <p className="mt-3 text-sm text-muted-foreground">Everything you need to learn the formats and see your patterns.</p>
-            <Link href="/sign-up" className="mt-6 inline-flex min-h-11 items-center rounded-lg border border-white/20 px-5 text-sm font-semibold">Start free</Link>
+            <Link href="/sign-up" className="mt-6 flex min-h-12 w-full items-center justify-center rounded-lg border border-white/20 px-5 text-sm font-semibold sm:inline-flex sm:w-auto">Start free</Link>
           </section>
           <section aria-labelledby="life-h" className="rounded-2xl border-2 border-brass p-7">
             <h2 id="life-h" className="text-3xl font-extrabold uppercase text-brass">Lifetime</h2>
             <p className="mt-1 font-display text-5xl font-black">{LEGAL.price} <span className="text-lg font-semibold text-muted-foreground">one time</span></p>
             <p className="mt-3 text-sm text-muted-foreground">For aspirants who want more practice material. No subscription, no renewal.</p>
-            <Link href="/premium" className="mt-6 inline-flex min-h-11 items-center rounded-lg bg-brass px-5 text-sm font-bold text-black">Get lifetime access</Link>
+            <Link href="/premium" className="mt-6 flex min-h-12 w-full items-center justify-center rounded-lg bg-brass px-5 text-sm font-bold text-black sm:inline-flex sm:w-auto">Get lifetime access</Link>
           </section>
         </div>
 
         <div className="mt-12 overflow-x-auto rounded-2xl border border-white/10" tabIndex={0} role="region" aria-label="Plan comparison, scrolls sideways on small screens">
-          <table className="w-full min-w-[34rem] text-left">
+          <table className="w-full text-left sm:min-w-[34rem]">
             <caption className="sr-only">Free and Lifetime plan comparison</caption>
             <thead className="bg-white/[0.04] text-sm text-muted-foreground">
               <tr><th scope="col" className="px-4 py-3 font-semibold">What you get</th><th scope="col" className="px-4 py-3 text-center font-semibold">Free</th><th scope="col" className="px-4 py-3 text-center font-semibold text-brass">Lifetime</th></tr>

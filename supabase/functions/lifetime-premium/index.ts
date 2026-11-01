@@ -13,10 +13,6 @@ const PAYABLE_AMOUNT_INR = LIST_PRICE_INR - DISCOUNT_INR;
 const PAYABLE_AMOUNT_PAISE = PAYABLE_AMOUNT_INR * 100;
 const PLAN_TYPE = "lifetime";
 
-const firebaseJwks = createRemoteJWKSet(
-  new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"),
-);
-
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -43,25 +39,7 @@ function buildUsername(email: string, displayName: string) {
     .slice(0, 24) || "member";
 }
 
-type AuthUser = { uid: string; email: string; name: string; provider: "firebase" | "clerk" };
-
-async function verifyFirebaseToken(token: string): Promise<AuthUser> {
-  const projectId = requireEnv("FIREBASE_PROJECT_ID");
-  const { payload } = await jwtVerify(token, firebaseJwks, {
-    issuer: `https://securetoken.google.com/${projectId}`,
-    audience: projectId,
-  });
-
-  const uid = normalizeText(payload.sub) || normalizeText(payload.user_id);
-  if (!uid) throw new Error("Firebase token did not include a user id");
-
-  return {
-    uid,
-    email: normalizeText(payload.email),
-    name: normalizeText(payload.name),
-    provider: "firebase",
-  };
-}
+type AuthUser = { uid: string; email: string; name: string; provider: "clerk" };
 
 let clerkJwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 
@@ -92,15 +70,13 @@ function unverifiedIssuer(token: string): string {
   }
 }
 
-/** Firebase ID tokens (mobile) and Clerk session tokens (web). Only used to choose a verifier; the verifier checks everything. */
+/** Clerk session tokens only. The issuer is read just to reject junk early; verifyClerkToken checks everything. */
 async function verifyAuthToken(token: string): Promise<AuthUser> {
-  const iss = unverifiedIssuer(token);
-  if (iss.startsWith("https://securetoken.google.com/")) return verifyFirebaseToken(token);
-  if (iss) return verifyClerkToken(token);
-  throw new Error("Unrecognised token");
+  if (!unverifiedIssuer(token)) throw new Error("Unrecognised token");
+  return verifyClerkToken(token);
 }
 
-/** For web (Clerk) users the PIQ must be complete before an order exists. The backend reads Firestore and decides. */
+/** For web (Clerk) users the PIQ must be complete before an order exists. The backend reads the database and decides. */
 async function assertPiqComplete(token: string) {
   const backendUrl = normalizeText(Deno.env.get("BACKEND_URL")).replace(/\/$/, "");
   if (!backendUrl) throw new Error("Web checkout is not configured (BACKEND_URL missing)");
@@ -157,6 +133,82 @@ async function createRazorpayOrder(params: {
   return body;
 }
 
+async function razorpayCall(method: string, path: string, body?: Record<string, unknown>) {
+  const res = await fetch(`https://api.razorpay.com/v1${path}`, {
+    method,
+    headers: { Authorization: razorpayAuthHeader(), "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error?.description ?? "Razorpay request failed");
+  return json;
+}
+
+/** A buyer is one Clerk user id. Kept as a list so callers that check "any of these ids" stay unchanged. */
+// deno-lint-ignore require-await
+async function linkedIds(_admin: ReturnType<typeof supabaseAdmin>, uid: string): Promise<string[]> {
+  return [uid];
+}
+
+async function hasPremium(admin: ReturnType<typeof supabaseAdmin>, ids: string[]): Promise<boolean> {
+  const { data } = await admin.from("premium_members").select("user_id").in("user_id", ids).eq("subscription_status", "active").limit(1);
+  return !!data?.length;
+}
+
+function gstBreakup(totalPaise: number) {
+  const rate = Number(Deno.env.get("GST_RATE_PERCENT") || 0);
+  const base = Math.round(totalPaise / (1 + rate / 100));
+  return { base_amount_paise: base, gst_rate_percent: rate, gst_amount_paise: totalPaise - base };
+}
+
+/** Same shape for a fresh order and a re-used one. Snake_case keys are for the mobile app, camelCase for the web. */
+function orderPayload(order: { order_id: string; amount_paise: number }, name: string, email: string) {
+  return {
+    success: true,
+    key_id: requireEnv("RAZORPAY_KEY_ID"),
+    order_id: order.order_id,
+    amount_paise: order.amount_paise,
+    amount_inr: order.amount_paise / 100,
+    list_price_inr: LIST_PRICE_INR,
+    discount_inr: DISCOUNT_INR,
+    currency: "INR",
+    keyId: requireEnv("RAZORPAY_KEY_ID"),
+    orderId: order.order_id,
+    amountPaise: order.amount_paise,
+    amountInr: order.amount_paise / 100,
+    prefill: { name, email, contact: "" },
+  };
+}
+
+const OPEN_ORDER_REUSE_MS = 30 * 60 * 1000;
+
+// ---------------------------------------------------------------- coupon codes (payment bypass)
+
+const COUPON_MAX_FAILS_PER_HOUR = 5;
+
+async function sha256Hex(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+const normalizeCoupon = (value: unknown) => normalizeText(value).toUpperCase().replace(/\s+/g, "");
+
+/** Codes live only in the COUPON_CODES function secret (comma separated). Returns a short id of the matched code, or null. */
+async function matchCoupon(input: string): Promise<string | null> {
+  const codes = normalizeText(Deno.env.get("COUPON_CODES")).split(",").map(normalizeCoupon).filter(Boolean);
+  const inputHash = await sha256Hex(input);
+  let matched: string | null = null;
+  // Compare hashes of every code (no early exit) so timing does not reveal how close a guess was.
+  for (const code of codes) {
+    const h = await sha256Hex(code);
+    let diff = h.length ^ inputHash.length;
+    for (let i = 0; i < Math.min(h.length, inputHash.length); i++) diff |= h.charCodeAt(i) ^ inputHash.charCodeAt(i);
+    if (diff === 0) matched = h.slice(0, 8);
+  }
+  return matched;
+}
+
+
 async function fetchRazorpayOrder(orderId: string) {
   const res = await fetch(`https://api.razorpay.com/v1/orders/${orderId}`, {
     headers: {
@@ -192,6 +244,7 @@ async function updatePremiumProfile(params: {
   username: string;
   orderId: string;
   paymentId: string;
+  amountInr?: number;
 }) {
   const admin = supabaseAdmin();
   const now = new Date().toISOString();
@@ -226,7 +279,7 @@ async function updatePremiumProfile(params: {
         ...profilePayload,
         order_id: params.orderId,
         payment_id: params.paymentId,
-        amount_inr: PAYABLE_AMOUNT_INR,
+        amount_inr: params.amountInr ?? PAYABLE_AMOUNT_INR,
         premium_since: premiumSince,
       },
       { onConflict: "user_id" },
@@ -234,12 +287,12 @@ async function updatePremiumProfile(params: {
   if (premiumError) throw premiumError;
 }
 
-async function syncFirestoreProfile(token: string, payload: Record<string, unknown>) {
+async function syncProfile(token: string, payload: Record<string, unknown>) {
   const backendUrl = normalizeText(Deno.env.get("BACKEND_URL"));
   if (!backendUrl) return;
 
   try {
-    const res = await fetch(`${backendUrl.replace(/\/$/, "")}/api/firestore/user/profile`, {
+    const res = await fetch(`${backendUrl.replace(/\/$/, "")}/api/data/user/profile`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -250,11 +303,11 @@ async function syncFirestoreProfile(token: string, payload: Record<string, unkno
 
     if (!res.ok) {
       // Non-fatal: Supabase records already updated; log and continue.
-      console.warn(`[lifetime-premium] Firestore premium sync failed (${res.status}): ${await res.text()}`);
+      console.warn(`[lifetime-premium] profile premium sync failed (${res.status}): ${await res.text()}`);
     }
   } catch (err) {
-    // Non-fatal: network error during optional Firestore sync.
-    console.warn("[lifetime-premium] Firestore premium sync error:", err);
+    // Non-fatal: network error during optional profile sync.
+    console.warn("[lifetime-premium] profile premium sync error:", err);
   }
 }
 
@@ -273,38 +326,95 @@ serve(async (req: Request) => {
     const action = normalizeText(body.action);
 
     if (action === "create_order") {
-      if (authUser.provider === "clerk") await assertPiqComplete(token);
+      await assertPiqComplete(token);
+      const admin = supabaseAdmin();
+      const ids = await linkedIds(admin, authUser.uid);
+      if (await hasPremium(admin, ids)) return jsonResponse({ error: "You already have Lifetime access" }, 409);
+
       const email = normalizeText(body.email) || authUser.email;
       const username = buildUsername(email, normalizeText(body.username) || authUser.name);
+
+      // Re-use a recent unpaid order (retry after cancel, page refresh) instead of piling up new ones.
+      const since = new Date(Date.now() - OPEN_ORDER_REUSE_MS).toISOString();
+      const { data: open } = await admin
+        .from("payment_transactions")
+        .select("order_id, amount_paise")
+        .eq("user_id", authUser.uid)
+        .in("status", ["created", "failed"])
+        .eq("amount_paise", PAYABLE_AMOUNT_PAISE)
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (open?.[0]) return jsonResponse(orderPayload(open[0], authUser.name, email));
+
       const order = await createRazorpayOrder({
         uid: authUser.uid,
         email,
         username,
       });
+      if (order.amount !== PAYABLE_AMOUNT_PAISE) throw new Error("The payment provider returned an unexpected amount");
 
-      const admin = supabaseAdmin();
-      await admin.from("payment_transactions").insert({
+      const { error: insertError } = await admin.from("payment_transactions").insert({
         user_id: authUser.uid,
         txnid: order.id,
         order_id: order.id,
         amount: PAYABLE_AMOUNT_INR,
         amount_paise: PAYABLE_AMOUNT_PAISE,
+        currency: "INR",
         status: "created",
         email,
-        source: authUser.provider === "clerk" ? "web" : "mobile",
+        source: "web",
         provider_reference_id: order.id,
         raw_response: order,
+        ...gstBreakup(PAYABLE_AMOUNT_PAISE),
       });
+      if (insertError) throw new Error("Could not start the payment. Please try again.");
+      await admin.from("payment_events").insert({ order_id: order.id, user_id: authUser.uid, kind: "order_created", to_status: "created" });
 
+      return jsonResponse(orderPayload({ order_id: order.id, amount_paise: PAYABLE_AMOUNT_PAISE }, authUser.name, email));
+    }
+
+    if (action === "order_status") {
+      const orderId = normalizeText(body.order_id);
+      if (!/^order_\w+$/.test(orderId)) return jsonResponse({ error: "Malformed order id" }, 400);
+      const admin = supabaseAdmin();
+      const ids = await linkedIds(admin, authUser.uid);
+      const { data: row } = await admin.from("payment_transactions").select("user_id, status, payment_id").eq("order_id", orderId).maybeSingle();
+      if (!row || !ids.includes(row.user_id)) return jsonResponse({ error: "Order not found" }, 404);
+      return jsonResponse({ orderId, status: row.status, paymentId: row.payment_id ?? null });
+    }
+
+    if (action === "history") {
+      const admin = supabaseAdmin();
+      const ids = await linkedIds(admin, authUser.uid);
+      const { data, error } = await admin
+        .from("payment_transactions")
+        .select("order_id, payment_id, status, amount, amount_paise, currency, base_amount_paise, gst_rate_percent, gst_amount_paise, receipt_no, source, email, created_at, paid_at, refunded_at, failure_reason")
+        .in("user_id", ids)
+        .in("status", ["paid", "failed", "refunded"])
+        .order("created_at", { ascending: false });
+      if (error) throw new Error("Could not load your payments");
+      const gstin = normalizeText(Deno.env.get("BUSINESS_GSTIN")) || null;
       return jsonResponse({
-        success: true,
-        key_id: requireEnv("RAZORPAY_KEY_ID"),
-        order_id: order.id,
-        amount_paise: PAYABLE_AMOUNT_PAISE,
-        amount_inr: PAYABLE_AMOUNT_INR,
-        list_price_inr: LIST_PRICE_INR,
-        discount_inr: DISCOUNT_INR,
-        currency: "INR",
+        premium: await hasPremium(admin, ids),
+        items: (data ?? []).map((r) => ({
+          orderId: r.order_id,
+          paymentId: r.payment_id,
+          status: r.status,
+          amountInr: r.amount,
+          currency: r.currency,
+          baseAmountInr: r.base_amount_paise != null ? r.base_amount_paise / 100 : r.amount,
+          gstRatePercent: Number(r.gst_rate_percent || 0),
+          gstAmountInr: (r.gst_amount_paise || 0) / 100,
+          gstin,
+          receiptNo: r.receipt_no,
+          source: r.source,
+          email: r.email,
+          createdAt: r.created_at,
+          paidAt: r.paid_at,
+          refundedAt: r.refunded_at,
+          failureReason: r.failure_reason,
+        })),
       });
     }
 
@@ -333,6 +443,16 @@ serve(async (req: Request) => {
         return jsonResponse({ error: "This payment was refunded" }, 409);
       }
 
+      // The signature proves the checkout belongs to this order. Also confirm with Razorpay that the money is real.
+      let payment = await razorpayCall("GET", `/payments/${paymentId}`);
+      if (payment.order_id !== orderId || payment.amount !== PAYABLE_AMOUNT_PAISE) {
+        return jsonResponse({ error: "Payment does not match this order" }, 400);
+      }
+      if (payment.status === "authorized") {
+        payment = await razorpayCall("POST", `/payments/${paymentId}/capture`, { amount: PAYABLE_AMOUNT_PAISE, currency: "INR" });
+      }
+      if (payment.status !== "captured") return jsonResponse({ error: "Payment was not completed" }, 400);
+
       const order = await fetchRazorpayOrder(orderId);
       const notes = order.notes ?? {};
       const noteUid = normalizeText(notes.uid);
@@ -353,7 +473,7 @@ serve(async (req: Request) => {
         paymentId,
       });
 
-      await syncFirestoreProfile(token, {
+      await syncProfile(token, {
         userId: authUser.uid,
         email,
         username,
@@ -382,10 +502,48 @@ serve(async (req: Request) => {
 
       return jsonResponse({
         success: true,
+        status: "paid",
         isPremium: true,
         planType: PLAN_TYPE,
         amount_inr: PAYABLE_AMOUNT_INR,
       });
+    }
+
+    if (action === "redeem_coupon") {
+      const admin = supabaseAdmin();
+      const ids = await linkedIds(admin, authUser.uid);
+      if (await hasPremium(admin, ids)) return jsonResponse({ success: true, status: "paid", isPremium: true, alreadyPremium: true });
+
+      // Throttle guessing: failed attempts are logged, and too many in the last hour lock this user out for a while.
+      const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { count } = await admin.from("payment_events").select("id", { count: "exact", head: true })
+        .eq("user_id", authUser.uid).eq("kind", "coupon_failed").gte("created_at", since);
+      if ((count ?? 0) >= COUPON_MAX_FAILS_PER_HOUR) {
+        return jsonResponse({ error: "Too many attempts. Try again in an hour." }, 429);
+      }
+
+      const code = normalizeCoupon(body.code);
+      const id = code ? await matchCoupon(code) : null;
+      if (!id) {
+        await admin.from("payment_events").insert({ user_id: authUser.uid, kind: "coupon_failed" });
+        return jsonResponse({ error: "That code is not valid." }, 400);
+      }
+
+      const email = normalizeText(body.email) || authUser.email;
+      const username = buildUsername(email, normalizeText(body.username) || authUser.name);
+      await updatePremiumProfile({
+        uid: authUser.uid, email, username,
+        orderId: `coupon_${id}`, paymentId: `coupon_${id}`, amountInr: 0,
+      });
+      await admin.from("payment_events").insert({
+        user_id: authUser.uid, kind: "coupon_redeemed", to_status: "paid", detail: { coupon: id },
+      });
+      await syncProfile(token, {
+        userId: authUser.uid, email, username, isPremium: true, planType: PLAN_TYPE,
+        premiumAmount: 0, premiumListPrice: LIST_PRICE_INR, premiumDiscount: LIST_PRICE_INR,
+        premiumOrderId: `coupon_${id}`, premiumPaymentId: `coupon_${id}`,
+      });
+      return jsonResponse({ success: true, status: "paid", isPremium: true, planType: PLAN_TYPE });
     }
 
     throw new Error("Unsupported action");

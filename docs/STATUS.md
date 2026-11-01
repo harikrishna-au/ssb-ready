@@ -50,10 +50,23 @@ Branch: `integration/merged` (all five agent branches merged). Written 31 Oct 20
 - `/pricing`, exam pages, `/invite` and the manifest were redirecting to sign-in; now public.
 - Removed `force-static` from the RSS route (breaks the build here). Agent 2's picture test stubs the new premium service.
 
+## Auth and data: Clerk + Supabase only (1 Nov 2026)
+- Login is Clerk only. All user data (results, history, PIQ, profiles) is in Supabase (`app_docs`, private, service-role key only). There is **no Firebase or Firestore** in `ssb_web`, `ssb_backend` or `supabase/`.
+- Removed: the `firebase-admin` package, the Firebase token path, Firebase/Clerk account linking (`/api/me/link-identity`, `user_identities`), the Firestore copy script and the legacy OIR import/purge scripts (they were built around Firestore; use the Supabase content bank and `scripts/seed_content.js`).
+- Renamed: `/api/firestore/*` is now `/api/data/*`; `req.firebaseUser` is `req.authUser`; export JSON key `firestore` is `documents`.
+- **The Flutter app (`ssb_ready_app`) still uses Firebase login and the old `/api/firestore/*` paths. It will not work against this backend until it is moved to Clerk.**
+- Leftover Firebase files you can delete when you are ready: `firebase/`, `firebase.json`, `_ref_gbar/`, and the Firebase mentions in `docs/agents/`, `docs/handoff/` and `docs/SECURITY.md` (historical).
+
+## Backend deployed on AWS (1 Nov 2026)
+- Live: `https://ajqqwsb247x3hpmugniuho37p40wbkcs.lambda-url.ap-southeast-2.on.aws` (Lambda + Function URL, Sydney). Checked from the internet: database ok, Supabase ok, protected routes ask for login, CORS allows only the Vercel site, 66 of 71 endpoints answer (the rest are the readiness check, which fails only because of the OpenAI key, and 3 public write routes not probed).
+- Redeploy with `ssb_backend/scripts/deploy_lambda.sh [--env]`. Details in `ssb_backend/DEPLOY.md`.
+- Still to do: set `NEXT_PUBLIC_BACKEND_URL` in Vercel and redeploy; valid `OPENAI_API_KEY` then `scripts/deploy_lambda.sh --env`; a cost budget alert; schedule the Radar jobs (EventBridge) once Radar has verified data and an email provider; Razorpay keys and webhook secret when payments go live.
+
 ## BACKLOG: what is NOT done (work through this gradually)
 
 ### A. Needs you first (nothing below works for real until these)
-- [ ] Working `SUPABASE_URL` (current one does not exist) and a service-role key (current key is anon).
+- [ ] **Database moved from Firestore to Supabase.** Apply `supabase/migrations/20261103000100_app_docs.sql`, then set `SUPABASE_SERVICE_ROLE_KEY` (the service-role key, never the anon key) on the backend host. The table is private; the backend refuses the anon key. If real mobile users already have data in Firestore, run `scripts/firestore_to_supabase.js --dry-run` then for real (needs the Firebase service-account JSON once). Firestore credentials are no longer needed for data.
+- [x] Supabase: the backend `.env` now points at a project that resolves and holds a service-role key (fixed 1 Nov). Still to do: apply the migrations in `supabase/migrations/` to that project (start with `20261103000100_app_docs.sql`), and point the web app's `NEXT_PUBLIC_SUPABASE_URL` / anon key at the same project.
 - [ ] Valid `OPENAI_API_KEY` (current one is rejected).
 - [ ] Rotate every secret that was pasted into chat. Never commit `.env`.
 - [ ] Apply all Supabase migrations in order; run the preview-bucket sync script; run the picture-metadata generator and review its output.

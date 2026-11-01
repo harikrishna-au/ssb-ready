@@ -10,12 +10,11 @@ async function boot() {
   const mailer = { sent: [], live: false, async send(m) { this.sent.push(m); return { dryRun: true }; } };
   process.env.CRON_SECRET = 'test-secret';
   // Test auth: "Bearer user:<uid>" -> that uid. No real tokens involved.
-  // Users named fb_ok / fb_unverified behave like Firebase tokens; cl_* like Clerk tokens (no email_verified claim).
   const auth = (req, _res, next) => {
     const m = /^Bearer user:(\w+)$/.exec(req.headers.authorization || '');
     if (!m) return next(Object.assign(new Error('no token'), { statusCode: 401 }));
     const uid = m[1];
-    req.firebaseUser = { uid, email: `${uid}@example.com`, ...(uid.startsWith('fb_ok') ? { email_verified: true } : uid.startsWith('fb_') ? { email_verified: false } : {}) };
+    req.authUser = { uid, email: `${uid}@example.com` };
     next();
   };
   const clerkVerified = new Set(['u1', 'cl_verified']);
@@ -120,20 +119,10 @@ test('reminder email addresses: only verified ones are accepted', async (t) => {
   t.after(close);
   const on = { remindersEnabled: true };
 
-  // Firebase, email not verified
-  let r = await call('PUT', '/prefs', 'fb_unverified', on);
-  assert.equal(r.status, 422);
-  assert.equal(r.json.needsVerifiedEmail, true);
-  assert.equal((await store.getPrefs('fb_unverified')).email || '', '');
   // Clerk, primary not verified
   r = await call('PUT', '/prefs', 'cl_unverified', { ...on, email: 'victim@example.com' });
   assert.equal(r.status, 422);
   assert.equal((await store.getPrefs('cl_unverified')).email || '', '');
-  // Firebase, verified
-  r = await call('PUT', '/prefs', 'fb_ok1', on);
-  assert.equal(r.status, 200);
-  assert.equal(r.json.prefs.hasEmail, true);
-  assert.equal(r.json.prefs.confirmed, false);
   // Clerk, verified primary
   r = await call('PUT', '/prefs', 'cl_verified', on);
   assert.equal(r.status, 200);
@@ -143,7 +132,7 @@ test('reminder email addresses: only verified ones are accepted', async (t) => {
   assert.equal(r.status, 422);
   assert.match(r.json.error.message, /Verify your email/);
   // only verified users were mailed, and only a confirmation (never a reminder)
-  assert.deepEqual(mailer.sent.map((m) => m.to).sort(), ['cl_verified@example.com', 'fb_ok1@example.com']);
+  assert.deepEqual(mailer.sent.map((m) => m.to).sort(), ['cl_verified@example.com']);
   assert.ok(mailer.sent.every((m) => /Confirm/.test(m.subject)));
   // turning reminders off never needs an address
   r = await call('PUT', '/prefs', 'nobody', { remindersEnabled: false });

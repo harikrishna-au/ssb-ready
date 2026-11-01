@@ -30,7 +30,7 @@ test('wrong types are rejected', async () => {
   assert.equal((await call('POST', '/api/evaluate/tat', { token: token(), body: { story: 's' } })).status, 400);
   assert.equal((await call('POST', '/api/evaluation/run', { token: token(), body: {} })).status, 400);
   assert.equal((await call('POST', '/api/interview/reply', { token: token(), body: { piq: {}, chatHistory: 'x' } })).status, 400);
-  assert.equal((await call('POST', '/api/firestore/oir/results', { token: token(), body: { userId: 'user_alice', score: 'high' } })).status, 400);
+  assert.equal((await call('POST', '/api/data/oir/results', { token: token(), body: { userId: 'user_alice', score: 'high' } })).status, 400);
 });
 
 test('valid requests reach the AI service', async () => {
@@ -40,7 +40,7 @@ test('valid requests reach the AI service', async () => {
 });
 
 test('unknown fields are stripped before storage (no mass assignment)', async () => {
-  const r = await call('POST', '/api/firestore/ppdt/results', {
+  const r = await call('POST', '/api/data/ppdt/results', {
     token: token(),
     body: { userId: 'user_alice', userStory: 'story', isAdmin: true, premium: true, __proto__x: 1 }
   });
@@ -52,9 +52,9 @@ test('unknown fields are stripped before storage (no mass assignment)', async ()
 });
 
 test('PIQ accepts only flat primitive values and a bounded number of fields', async () => {
-  assert.equal((await call('POST', '/api/firestore/piq', { token: token(), body: { userId: 'user_alice', fullName: { $set: 1 } } })).status, 400);
+  assert.equal((await call('POST', '/api/data/piq', { token: token(), body: { userId: 'user_alice', fullName: { $set: 1 } } })).status, 400);
   const many = Object.fromEntries(Array.from({ length: 100 }, (_, i) => [`f${i}`, 'x']));
-  assert.equal((await call('POST', '/api/firestore/piq', { token: token(), body: { userId: 'user_alice', ...many } })).status, 400);
+  assert.equal((await call('POST', '/api/data/piq', { token: token(), body: { userId: 'user_alice', ...many } })).status, 400);
 });
 
 test('DELETE /api/account needs the exact confirmation word', async () => {

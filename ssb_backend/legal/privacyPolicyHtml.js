@@ -114,7 +114,8 @@ function buildPrivacyPolicyHtml({ supportEmail, publicUrl, effectiveDate }) {
       <h2>3. Third-party services</h2>
       <p>We use trusted providers to run the Service. They process data only as needed to perform their role:</p>
       <ul>
-        <li><strong>Google Firebase</strong> — authentication and cloud database (Firestore) for account and app data.</li>
+        <li><strong>Clerk</strong> — sign-in and account management.</li>
+        <li><strong>Supabase</strong> — database and file storage for your account data, results and PIQ.</li>
         <li><strong>Google Sign-In</strong> — optional sign-in, subject to Google’s privacy policy.</li>
         <li><strong>AI providers</strong> — content you submit for evaluation may be processed by AI services (for example, OpenAI) via our backend to generate feedback.</li>
         <li><strong>Hosting</strong> — our API may be hosted on cloud platforms (for example, Render) that process network and server logs.</li>

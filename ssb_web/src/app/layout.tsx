@@ -1,5 +1,5 @@
 import { ClerkProvider } from "@clerk/nextjs";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Big_Shoulders, Public_Sans } from "next/font/google";
 import { dark } from "@clerk/ui/themes";
 import { SessionWatcher } from "@/components/session-watcher";
@@ -33,6 +33,9 @@ export const metadata: Metadata = {
     images: [{ url: "/og-default.png", width: 1200, height: 630, alt: "ReadyKadet: timed SSB practice" }],
   },
 };
+
+/** viewport-fit=cover lets the bottom bar sit above the iPhone home indicator via env(safe-area-inset-*). */
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#0a0b0f" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

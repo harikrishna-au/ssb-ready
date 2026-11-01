@@ -1,5 +1,5 @@
 const { asyncHandler } = require('../middleware/asyncHandler');
-const { db } = require('../config/firebase');
+const { db } = require('../config/db');
 const { evaluateTatPipeline } = require('../services/aiService');
 const { resolveImage } = require('../services/storyImages');
 
@@ -10,7 +10,7 @@ function badRequest(message) {
 }
 
 const runTatPipeline = asyncHandler(async (req, res) => {
-  const userId = req.firebaseUser.uid;
+  const userId = req.authUser.uid;
   const {
     imageId,
     imageUrl,

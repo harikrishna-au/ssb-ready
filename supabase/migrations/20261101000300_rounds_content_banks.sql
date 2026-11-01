@@ -33,7 +33,7 @@ create table if not exists public.content_lecturette_topics (
 
 create table if not exists public.content_oir_questions (
   id uuid primary key default gen_random_uuid(),
-  legacy_id text unique,                        -- id in the old Firestore oir_questions collection
+  legacy_id text unique,                        -- id in the old oir_questions collection
   text text not null,
   options jsonb not null,                       -- ["a","b","c","d"]
   correct_answer_index smallint not null,       -- NEVER sent to clients before they answer

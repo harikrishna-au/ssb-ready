@@ -1,4 +1,4 @@
-const { firebaseProtect } = require('./firebaseAuthMiddleware');
+const { requireAuth } = require('./auth');
 const { getLimiters } = require('./rateLimit');
 
 /**
@@ -11,7 +11,7 @@ const { getLimiters } = require('./rateLimit');
 function guard({ schema, limits = [] } = {}) {
   const mark = (req, _res, next) => { req.guarded = true; next(); };
   mark.isGuard = true; // lets tests prove every /api route is guarded
-  const chain = [firebaseProtect, mark];
+  const chain = [requireAuth, mark];
   for (const name of limits) {
     chain.push((req, res, next) => {
       const l = getLimiters()[name];

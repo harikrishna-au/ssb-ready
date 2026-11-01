@@ -4,24 +4,20 @@ const { logger } = require('../utils/logger');
 
 const BATCH = 400;
 
-/** Dependencies are injected so the service can be tested without Firebase, Supabase or Clerk. */
+/** Dependencies are injected so the service can be tested without Supabase or Clerk. */
 function defaultDeps() {
-  const { db, admin } = require('../config/firebase');
+  const { db } = require('../config/db');
   const supabase = require('../config/supabase');
   return {
     db,
     supabase,
     deleteIdentity: async (user) => {
-      if (user.provider === 'clerk') {
-        if (!process.env.CLERK_SECRET_KEY) throw new Error('CLERK_SECRET_KEY missing');
-        const { createClerkClient } = require('@clerk/backend');
-        await createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY }).users.deleteUser(user.uid);
-      } else {
-        await admin.auth().deleteUser(user.uid);
-      }
+      if (!process.env.CLERK_SECRET_KEY) throw new Error('CLERK_SECRET_KEY missing');
+      const { createClerkClient } = require('@clerk/backend');
+      await createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY }).users.deleteUser(user.uid);
     },
     getIdentity: async (user) => {
-      if (user.provider !== 'clerk' || !process.env.CLERK_SECRET_KEY) return { id: user.uid, email: user.email || null };
+      if (!process.env.CLERK_SECRET_KEY) return { id: user.uid, email: user.email || null };
       const { createClerkClient } = require('@clerk/backend');
       const u = await createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY }).users.getUser(user.uid);
       return {
@@ -45,16 +41,16 @@ const toPlain = (v) => {
 };
 
 async function exportUserData(user, deps = defaultDeps()) {
-  const out = { exportedAt: new Date().toISOString(), userId: user.uid, account: null, firestore: {}, supabase: {}, notes: [] };
+  const out = { exportedAt: new Date().toISOString(), userId: user.uid, account: null, documents: {}, supabase: {}, notes: [] };
   out.account = await deps.getIdentity(user);
 
-  for (const c of userData.firestoreByField) {
+  for (const c of userData.docsByField) {
     const snap = await deps.db.collection(c).where('userId', '==', user.uid).get();
-    out.firestore[c] = snap.docs.map((d) => ({ id: d.id, ...toPlain(d.data()) }));
+    out.documents[c] = snap.docs.map((d) => ({ id: d.id, ...toPlain(d.data()) }));
   }
-  for (const c of userData.firestoreById) {
+  for (const c of userData.docsById) {
     const doc = await deps.db.collection(c).doc(user.uid).get();
-    out.firestore[c] = doc.exists ? toPlain(doc.data()) : null;
+    out.documents[c] = doc.exists ? toPlain(doc.data()) : null;
   }
   for (const t of userData.supabaseTables) {
     const { data, error } = await deps.supabase.from(t.table).select(t.export).eq('user_id', user.uid);
@@ -70,7 +66,7 @@ async function exportUserData(user, deps = defaultDeps()) {
 
 async function deleteByField(db, collection, uid) {
   let removed = 0;
-  // Loop in batches so large histories never hit Firestore's batch limit.
+  // Loop in batches so large histories never hit a single huge delete.
   for (;;) {
     const snap = await db.collection(collection).where('userId', '==', uid).limit(BATCH).get();
     if (snap.empty) return removed;
@@ -97,8 +93,8 @@ async function deleteUserData(user, deps = defaultDeps()) {
     }
   };
 
-  for (const c of userData.firestoreByField) await step(`firestore:${c}`, () => deleteByField(deps.db, c, uid));
-  for (const c of userData.firestoreById) await step(`firestore:${c}`, () => deps.db.collection(c).doc(uid).delete());
+  for (const c of userData.docsByField) await step(`documents:${c}`, () => deleteByField(deps.db, c, uid));
+  for (const c of userData.docsById) await step(`documents:${c}`, () => deps.db.collection(c).doc(uid).delete());
   for (const t of userData.supabaseTables) {
     await step(`supabase:${t.table}`, async () => {
       const q =

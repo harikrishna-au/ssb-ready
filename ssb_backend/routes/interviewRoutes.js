@@ -7,7 +7,7 @@ const { interviewReplyHandler } = require('../controllers/evaluationController')
 const router = express.Router({ caseSensitive: true });
 
 // /prep requires Supabase PIQ lookup — kept as legacy; unused by current app.
-// /reply and /bank use Firebase auth to match the Flutter BackendApiClient.
+// /reply and /bank need a signed-in user.
 router.post('/reply', ...guard({ schema: schemas.interviewReply, limits: AI }), interviewReplyHandler);
 router.get('/bank', ...guard({ limits: ['write'] }), getInterviewQuestionBankHandler);
 

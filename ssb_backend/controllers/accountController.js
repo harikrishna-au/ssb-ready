@@ -3,14 +3,14 @@ const { exportUserData, deleteUserData } = require('../services/accountData');
 const { logger } = require('../utils/logger');
 
 const exportAccount = asyncHandler(async (req, res) => {
-  const data = await exportUserData(req.firebaseUser);
+  const data = await exportUserData(req.authUser);
   res.setHeader('Content-Disposition', 'attachment; filename="readykadet-my-data.json"');
   res.setHeader('Cache-Control', 'no-store');
   res.json(data);
 });
 
 const deleteAccount = asyncHandler(async (req, res) => {
-  const result = await deleteUserData(req.firebaseUser);
+  const result = await deleteUserData(req.authUser);
   logger.info('account deletion finished', { requestId: req.requestId, ok: result.ok, failedSteps: result.failed });
   if (!result.ok) {
     // Sent directly (not via the error handler) so the message survives in production.

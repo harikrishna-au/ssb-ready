@@ -9,7 +9,7 @@ function badRequest(message) {
 
 /**
  * POST /api/evaluation/run
- * Auth: Firebase ID token (Authorization: Bearer …)
+ * Auth: Clerk session token (Authorization: Bearer …)
  * Body: { testType: 'WAT'|'SRT'|'OIR'|'INTERVIEW_REPLY', payload: object }
  *
  * - WAT/SRT: payload.responses — map of strings
@@ -17,7 +17,7 @@ function badRequest(message) {
  * - INTERVIEW_REPLY: payload.piq, payload.chatHistory
  */
 const runEvaluationHandler = asyncHandler(async (req, res) => {
-  const userId = req.firebaseUser.uid;
+  const userId = req.authUser.uid;
   const { testType, payload } = req.body;
   if (!testType || typeof testType !== 'string') {
     throw badRequest('testType is required');

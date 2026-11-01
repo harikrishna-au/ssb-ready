@@ -5,7 +5,6 @@
  */
 const supabase = require('../config/supabase');
 const { logger } = require('../utils/logger');
-const { linkedIds } = require('./identity');
 
 const CACHE_MS = 10_000;
 const cache = new Map(); // userId -> { at, value }
@@ -24,7 +23,7 @@ async function getEntitlement(userId, { fresh = false } = {}) {
 
   let value = FREE;
   try {
-    const ids = await linkedIds(userId);
+    const ids = [userId];
     const { data, error } = await supabase
       .from('premium_members')
       .select('user_id, plan_type, subscription_status, premium_expires_at, premium_since, updated_at, payment_id, order_id, amount_inr')

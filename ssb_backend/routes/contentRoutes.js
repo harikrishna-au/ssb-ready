@@ -11,7 +11,7 @@ router.post(
   '/oir/check',
   ...guard({ schema: schemas.oirCheck, limits: ['write'] }),
   asyncHandler(async (req, res) => {
-    res.json({ success: true, ...(await checkOirAnswer({ ...(req.body || {}), userId: req.firebaseUser.uid })) });
+    res.json({ success: true, ...(await checkOirAnswer({ ...(req.body || {}), userId: req.authUser.uid })) });
   })
 );
 
@@ -21,7 +21,7 @@ router.get(
   ...guard({ limits: ['write'] }),
   asyncHandler(async (req, res) => {
     const tags = typeof req.query.tags === 'string' ? req.query.tags.split(',').filter(Boolean) : undefined;
-    const out = await getRandomSet({ bank: req.params.bank, count: req.query.count, userId: req.firebaseUser.uid, tags, mode: req.query.mode === 'full' ? 'full' : 'quick' });
+    const out = await getRandomSet({ bank: req.params.bank, count: req.query.count, userId: req.authUser.uid, tags, mode: req.query.mode === 'full' ? 'full' : 'quick' });
     res.json({ success: true, ...out });
   })
 );

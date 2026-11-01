@@ -3,10 +3,10 @@
  * this list, so anyone adding a new per-user collection or table MUST add it here.
  */
 module.exports = {
-  // Firestore collections with one document per attempt, each carrying a `userId` field.
-  firestoreByField: ['oir_results', 'ppdt_results', 'tat_results', 'wat_results', 'srt_results'],
-  // Firestore collections where the document id is the user id.
-  firestoreById: ['piqs', 'users'],
+  // Collections with one document per attempt, each carrying a `userId` field.
+  docsByField: ['oir_results', 'ppdt_results', 'tat_results', 'wat_results', 'srt_results'],
+  // Collections where the document id is the user id.
+  docsById: ['piqs', 'users'],
   // Supabase tables keyed by `user_id`. `export` is the column list returned to the user.
   supabaseTables: [
     { table: 'profiles', export: 'user_id, email, username, is_premium, plan_type, subscription_status, premium_expires_at, updated_at', onDelete: 'delete' },

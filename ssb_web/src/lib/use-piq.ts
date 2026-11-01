@@ -12,7 +12,7 @@ async function load(userId: string) {
   if (inflight) return inflight;
   useStore.getState().setPiq({ data: useStore.getState().piq.data, status: "loading" });
   inflight = api
-    .get<{ data: PiqValues | null }>(`/api/firestore/piq/${userId}`)
+    .get<{ data: PiqValues | null }>(`/api/data/piq/${userId}`)
     .then((r) => useStore.getState().setPiq({ data: r.data ?? {}, status: "ready" }))
     .catch(() => useStore.getState().setPiq({ data: useStore.getState().piq.data, status: "error" }))
     .finally(() => { inflight = null; });
@@ -42,7 +42,7 @@ export function usePiq() {
     save: async (next: PiqValues) => {
       if (!user) throw new Error("Not signed in");
       const done = completeness(next).complete;
-      await api.post("/api/firestore/piq", {
+      await api.post("/api/data/piq", {
         ...next,
         userId: user.id,
         piqVersion: 2,

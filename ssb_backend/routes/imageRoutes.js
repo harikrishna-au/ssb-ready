@@ -16,7 +16,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const test = req.query.test === 'tat' ? 'tat' : 'ppdt';
     const count = Math.max(1, Math.min(12, Number.parseInt(req.query.count, 10) || 1));
-    const result = await pickImages({ test, count, userId: req.firebaseUser.uid });
+    const result = await pickImages({ test, count, userId: req.authUser.uid });
     if (result.data.length === 0) {
       const err = new Error('No pictures are available yet');
       err.statusCode = 503;

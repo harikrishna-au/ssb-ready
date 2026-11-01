@@ -19,7 +19,7 @@ async function load(userId: string) {
   setHistory({ data: history.data, status: "loading" });
   inflight = Promise.all(
     HISTORY_TESTS.map((t) =>
-      api.get<{ data: Attempt[] }>(`/api/firestore/${t}/history/${userId}`).then((r) => [t, r.data ?? []] as const),
+      api.get<{ data: Attempt[] }>(`/api/data/${t}/history/${userId}`).then((r) => [t, r.data ?? []] as const),
     ),
   )
     .then((entries) => useStore.getState().setHistory({ data: Object.fromEntries(entries) as History, status: "ready" }))

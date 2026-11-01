@@ -46,13 +46,10 @@ export function TestIntro(props: {
           </dl>
 
           {props.extra}
-          <button
-            onClick={props.onStart} disabled={props.loading}
-            className="mt-10 inline-flex h-14 items-center rounded-full bg-primary px-9 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30 disabled:opacity-60"
-          >
-            {props.loading ? "Loading…" : (props.startLabel ?? "Start test")}
-          </button>
-          {props.note && <p className="mt-3 text-sm text-muted-foreground">{props.note}</p>}
+          <div className="hidden md:block">
+            <StartButton {...props} className="mt-10" />
+            {props.note && <p className="mt-3 text-sm text-muted-foreground">{props.note}</p>}
+          </div>
         </div>
 
         <div className="space-y-5">
@@ -82,7 +79,24 @@ export function TestIntro(props: {
           </section>
         </div>
       </div>
+
+      {/* Phones: pinned above the tab bar so Start is always under the thumb. */}
+      <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 -mx-4 mt-6 border-t border-white/[0.08] bg-background/90 px-4 py-3 backdrop-blur-md md:hidden">
+        <StartButton {...props} className="w-full" />
+        {props.note && <p className="mt-2 text-center text-xs text-muted-foreground">{props.note}</p>}
+      </div>
     </div>
+  );
+}
+
+function StartButton(props: { onStart: () => void; loading?: boolean; startLabel?: string; className?: string }) {
+  return (
+    <button
+      onClick={props.onStart} disabled={props.loading}
+      className={`inline-flex h-14 items-center justify-center rounded-full bg-primary px-9 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30 disabled:opacity-60 ${props.className ?? ""}`}
+    >
+      {props.loading ? "Loading…" : (props.startLabel ?? "Start test")}
+    </button>
   );
 }
 
@@ -150,7 +164,7 @@ export function ExamStage(props: {
     <div className="stage-glow fixed inset-0 z-[60] flex flex-col overflow-y-auto bg-background">
       <header className="sticky top-0 z-10 border-b border-white/[0.06] bg-background/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-5xl items-center gap-4 px-4">
-          <button onClick={() => setConfirm(true)} aria-label="Exit test" className="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-muted-foreground transition-colors hover:border-white/30 hover:text-foreground">
+          <button onClick={() => setConfirm(true)} aria-label="Exit test" className="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-muted-foreground transition-colors hover:border-white/30 hover:text-foreground">
             <X className="size-4" aria-hidden />
           </button>
           <div className="min-w-0 flex-1">
@@ -167,7 +181,7 @@ export function ExamStage(props: {
         {props.stepper && <Stepper {...props.stepper} />}
       </header>
 
-      <main className={`mx-auto flex w-full flex-1 flex-col justify-center px-4 py-8 ${props.wide ? "max-w-5xl" : "max-w-3xl"}`}>
+      <main className={`mx-auto flex w-full flex-1 flex-col justify-center px-4 pt-6 pb-[max(2rem,env(safe-area-inset-bottom))] sm:py-8 ${props.wide ? "max-w-5xl" : "max-w-3xl"}`}>
         <div key={String(p?.current ?? 0)} className="rise">{props.children}</div>
       </main>
 
@@ -195,8 +209,8 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
           <span className={`grid size-5 place-items-center rounded-full text-[10px] font-bold ${i < current ? "bg-primary text-primary-foreground" : i === current ? "border border-primary text-primary" : "border border-white/15 text-muted-foreground"}`}>
             {i < current ? <Check className="size-3" aria-hidden /> : i + 1}
           </span>
-          <span className={i === current ? "font-semibold text-foreground" : "text-muted-foreground"}>{s}</span>
-          {i < steps.length - 1 && <span className="mx-1 h-px w-6 bg-white/15" aria-hidden />}
+          <span className={i === current ? "font-semibold text-foreground" : "hidden text-muted-foreground sm:inline"}>{s}</span>
+          {i < steps.length - 1 && <span className="mx-0.5 h-px w-4 bg-white/15 sm:mx-1 sm:w-6" aria-hidden />}
         </li>
       ))}
     </ol>
@@ -219,7 +233,7 @@ export function WritingPad(props: {
       <textarea
         aria-label={props.label} autoFocus={props.autoFocus} rows={props.rows ?? 9}
         value={props.value} onChange={(e) => props.onChange(e.target.value)} placeholder={props.placeholder}
-        className="w-full resize-none rounded-2xl border border-white/10 bg-card/60 p-5 text-lg leading-relaxed outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary"
+        className="w-full resize-none rounded-2xl border border-white/10 bg-card/60 p-4 text-base sm:p-5 sm:text-lg leading-relaxed outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary"
       />
       <p className="mt-2 text-right text-xs text-muted-foreground">{words} {words === 1 ? "word" : "words"}</p>
     </div>
@@ -332,7 +346,7 @@ export function ScoreResult(props: {
 
       <div className="flex flex-wrap gap-3">
         <PrimaryButton onClick={props.onRetry}>{props.retryLabel ?? "Try again"}</PrimaryButton>
-        <Link href="/history" className="inline-flex h-12 items-center rounded-full border border-white/20 px-7 font-semibold transition-colors hover:border-white/40">View progress</Link>
+        <Link href="/history" className="inline-flex h-12 items-center justify-center rounded-full border border-white/20 px-7 font-semibold transition-colors hover:border-white/40">View progress</Link>
         <Link href="/tests" className="inline-flex h-12 items-center rounded-full px-5 font-semibold text-muted-foreground transition-colors hover:text-foreground">Another test</Link>
       </div>
       <p className="text-xs text-muted-foreground">AI feedback helps you practise. It is not an official assessment or a prediction of the board&apos;s decision.</p>

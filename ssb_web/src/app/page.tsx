@@ -37,8 +37,8 @@ export default function Landing() {
                 Clear the Day 1 screening, then fix what the psychology tests expose. Timed OIR, PPDT, TAT, WAT, SRT and SDT, Lecturette practice and an interview guide. Every written attempt is scored against Officer Like Qualities.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-4">
-                <Link href="/sign-up" className="rounded-lg bg-primary px-6 py-3 font-semibold text-primary-foreground">Start free</Link>
-                <a href="#tests" className="px-2 py-3 text-sm text-muted-foreground hover:text-foreground">See what you can practise</a>
+                <Link href="/sign-up" className="w-full rounded-lg bg-primary px-6 py-3.5 text-center font-semibold text-primary-foreground sm:w-auto">Start free</Link>
+                <a href="#tests" className="flex min-h-11 w-full items-center justify-center px-2 text-sm text-muted-foreground hover:text-foreground sm:inline-flex sm:w-auto">See what you can practise</a>
               </div>
               <p className="mt-8 text-sm text-muted-foreground">For {EXAMS.slice(0, 5).join(", ")} aspirants. Works on your phone.</p>
             </div>
@@ -187,7 +187,7 @@ export default function Landing() {
         {/* Final CTA */}
         <section className="border-t border-white/5 py-20 text-center">
           <h2 className="mx-auto max-w-3xl px-5 text-5xl font-black uppercase leading-none sm:text-6xl">Your first WAT takes four minutes.</h2>
-          <Link href="/sign-up" className="mt-8 inline-flex rounded-lg bg-primary px-7 py-3.5 font-semibold text-primary-foreground">Start free</Link>
+          <Link href="/sign-up" className="mt-8 inline-flex min-h-12 items-center rounded-lg bg-primary px-7 py-3.5 font-semibold text-primary-foreground">Start free</Link>
         </section>
       </main>
       <SiteFooter />

@@ -31,12 +31,12 @@ test('export returns only the caller\'s data', async () => {
   assert.ok(text.includes('ALICE-wat_results'));
   assert.ok(text.includes('ALICE NAME'));
   assert.ok(!text.includes('BOB'), 'must not contain another user\'s data');
-  assert.equal(r.json.firestore.ppdt_results.length, 1);
+  assert.equal(r.json.documents.ppdt_results.length, 1);
   assert.equal(r.json.supabase.premium_members.length, 1);
   assert.ok(!text.includes('CARD-SECRET-77'), 'gateway payload is not exported');
 });
 
-test('delete removes the caller\'s Firestore docs, Supabase rows and identity, and leaves other users alone', async () => {
+test('delete removes the caller\'s documents, Supabase rows and identity, and leaves other users alone', async () => {
   await seed();
   const r = await call('DELETE', '/api/account', { token: alice(), body: { confirm: 'DELETE' } });
   assert.equal(r.status, 200);
@@ -76,13 +76,6 @@ test('if a step fails the login is kept so the user can retry', async () => {
   const retry = await call('DELETE', '/api/account', { token: alice(), body: { confirm: 'DELETE' } });
   assert.equal(retry.status, 200);
   assert.deepEqual(state.deletedIdentities, ['clerk:user_alice']);
-});
-
-test('a mobile (Firebase) user is deleted from Firebase Auth, not Clerk', async () => {
-  await seed();
-  const r = await call('DELETE', '/api/account', { token: 'fb-carol', body: { confirm: 'DELETE' } });
-  assert.equal(r.status, 200);
-  assert.deepEqual(state.deletedIdentities, ['firebase:fb_carol']);
 });
 
 test('export and delete are rate limited per user', async () => {

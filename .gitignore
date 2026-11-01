@@ -31,3 +31,8 @@ yarn-error.log*
 *.swo
 .DS_Store
 eval/out/
+
+# Backup/copies of env files must never be committed
+**/.env.bak*
+**/.env.*.bak
+**/.env.old*

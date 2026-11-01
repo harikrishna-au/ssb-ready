@@ -3,7 +3,7 @@
  *
  * Rules enforced here (never delegated to the client):
  *  - the amount is a server constant;
- *  - an order is only created when the PIQ stored in Firestore is complete;
+ *  - an order is only created when the PIQ stored in the database is complete;
  *  - premium is granted by exactly one function (`activate`) that is idempotent on order and payment id,
  *    and is called both by the browser redirect (verify) and by the webhook, whichever arrives first;
  *  - every state transition is written to payment_events.
@@ -13,7 +13,6 @@ const supabase = require('../config/supabase');
 const { logger } = require('../utils/logger');
 const { piqCompleteness } = require('./paymentsPiq');
 const { getEntitlement, invalidate } = require('./premium');
-const { linkedIds } = require('./identity');
 
 const LIST_PRICE_INR = 499;
 const DISCOUNT_INR = 200;
@@ -37,9 +36,9 @@ function httpError(statusCode, message, code) {
 
 const deps = {
   now: () => new Date(),
-  /** PIQ as stored in Firestore for this user, or null. */
+  /** PIQ as stored in the database for this user, or null. */
   async getPiq(userId) {
-    const { db } = require('../config/firebase');
+    const { db } = require('../config/db');
     const doc = await db.collection('piqs').doc(userId).get();
     return doc.exists ? doc.data() : null;
   },
@@ -66,11 +65,11 @@ const deps = {
   async sendReceipt(row) { return require('./paymentsReceipt').sendReceiptEmail(row); },
   async syncProfile(ids, info) {
     try {
-      const { db } = require('../config/firebase');
+      const { db } = require('../config/db');
       await Promise.all(ids.filter((i) => !i.startsWith('user_')).map((uid) =>
         db.collection('users').doc(uid).set({ isPremium: info.premium, planType: info.premium ? PLAN : '', premiumOrderId: info.orderId || '', premiumPaymentId: info.paymentId || '' }, { merge: true })));
     } catch (e) {
-      logger.warn(`Firestore premium sync skipped: ${e.message}`);
+      logger.warn(`Profile premium sync skipped: ${e.message}`);
     }
   }
 };
@@ -277,7 +276,7 @@ async function activate({ orderId, paymentId, via }) {
   await ensureEntitlement(row, row.payment_id);
   if (firstTime) {
     await logEvent({ kind: 'entitlement_granted', orderId, paymentId: row.payment_id, userId: row.user_id });
-    const ids = await linkedIds(row.user_id);
+    const ids = [row.user_id];
     await deps.syncProfile(ids, { premium: true, orderId, paymentId: row.payment_id });
     deps.sendReceipt(row).then(async (sent) => {
       if (sent) await supabase.from('payment_transactions').update({ receipt_emailed_at: deps.now().toISOString() }).eq('order_id', orderId);
@@ -295,7 +294,7 @@ async function verifyPayment({ userId, orderId, paymentId, signature }) {
   rateLimit('verify', userId, 30);
 
   const row = await getByOrder(orderId);
-  const ids = await linkedIds(userId);
+  const ids = [userId];
   if (!row || !ids.includes(row.user_id)) {
     // Same answer for "does not exist" and "not yours": do not reveal other people's orders.
     throw httpError(404, 'Order not found.', 'UNKNOWN_ORDER');
@@ -332,7 +331,7 @@ async function verifyPayment({ userId, orderId, paymentId, signature }) {
 async function orderStatus({ userId, orderId }) {
   if (!ORDER_ID.test(orderId || '')) throw httpError(400, 'Malformed order id.', 'BAD_REQUEST');
   const row = await getByOrder(orderId);
-  const ids = await linkedIds(userId);
+  const ids = [userId];
   if (!row || !ids.includes(row.user_id)) throw httpError(404, 'Order not found.', 'UNKNOWN_ORDER');
   return { orderId, status: row.status, paymentId: row.payment_id || null };
 }
@@ -387,7 +386,7 @@ async function handleWebhook({ rawBody, signature, eventId }) {
         .eq('user_id', row.user_id).eq('payment_id', paymentId);
       await supabase.from('profiles').update({ is_premium: false, subscription_status: 'refunded', updated_at: at }).eq('user_id', row.user_id);
       invalidate();
-      await deps.syncProfile(await linkedIds(row.user_id), { premium: false });
+      await deps.syncProfile([row.user_id], { premium: false });
       await logEvent({ kind: 'webhook:refund.processed', orderId: row.order_id, paymentId, userId: row.user_id, from: 'paid', to: 'refunded' });
       outcome = 'refunded';
     } else if (row) {
@@ -402,7 +401,7 @@ async function handleWebhook({ rawBody, signature, eventId }) {
 // ---------------------------------------------------------------- billing history
 
 async function listPayments(userId) {
-  const ids = await linkedIds(userId);
+  const ids = [userId];
   const { data, error } = await supabase
     .from('payment_transactions')
     .select('order_id, payment_id, status, amount, amount_paise, currency, base_amount_paise, gst_rate_percent, gst_amount_paise, receipt_no, source, email, created_at, paid_at, refunded_at, failure_reason')

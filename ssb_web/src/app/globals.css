@@ -174,3 +174,32 @@ a, button, summary { -webkit-tap-highlight-color: transparent; }
 .rise { animation: rise .35s ease-out both; }
 .timer-urgent { animation: pulse-ring 1s ease-in-out infinite; }
 .stage-glow { background: radial-gradient(60rem 30rem at 50% -10%, color-mix(in oklab, var(--primary) 14%, transparent), transparent 70%); }
+
+/* Phones: step the big display sizes down. Unlayered, so it wins over the utilities; sm: and up are untouched. */
+@media (max-width: 639px) {
+  .text-9xl { font-size: 3.25rem; }
+  .text-8xl { font-size: 3rem; }
+  .text-7xl { font-size: 2.75rem; }
+  .text-6xl { font-size: 2.5rem; }
+  .text-5xl { font-size: 2.125rem; }
+  .text-4xl { font-size: 1.75rem; }
+  .text-3xl { font-size: 1.5rem; }
+  .text-2xl { font-size: 1.25rem; }
+  h1, h2, h3 { overflow-wrap: break-word; }
+}
+
+/* Phone ergonomics */
+html { -webkit-text-size-adjust: 100%; }
+body { -webkit-tap-highlight-color: transparent; }
+@media (max-width: 639px) {
+  /* Under 16px, iOS Safari zooms the page when an input is focused. */
+  input, select, textarea { font-size: 16px; }
+  /* Desktop-sized breathing room is wasted on a 390px screen. */
+  .py-20 { padding-block: 3rem; }
+  .py-16 { padding-block: 2.5rem; }
+  .p-10, .p-8, .p-7 { padding: 1.25rem; }
+  .p-6 { padding: 1.125rem; }
+  .mt-12 { margin-top: 2rem; }
+  .gap-12 { gap: 2rem; }
+  .gap-10 { gap: 1.75rem; }
+}

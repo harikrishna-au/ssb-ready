@@ -36,7 +36,7 @@ function createRateLimiter({ name, windowMs, max, keyFn, now = Date.now, message
 }
 
 const byIp = (req) => req.ip || req.socket?.remoteAddress || 'unknown';
-const byUser = (req) => (req.firebaseUser?.uid ? `u:${req.firebaseUser.uid}` : null);
+const byUser = (req) => (req.authUser?.uid ? `u:${req.authUser.uid}` : null);
 
 const envInt = (name, fallback) => {
   const n = Number.parseInt(process.env[name], 10);

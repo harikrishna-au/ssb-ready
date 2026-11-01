@@ -6,7 +6,7 @@ let app, call;
 before(async () => { app = await makeApp(); call = api(app.url); });
 after(() => app.close());
 
-const whoami = (token, headers) => call('GET', '/api/firestore/user/profile', { token, headers });
+const whoami = (token, headers) => call('GET', '/api/data/user/profile', { token, headers });
 
 test('no token is rejected with 401', async () => {
   assert.equal((await whoami()).status, 401);
@@ -25,7 +25,7 @@ test('a forged Clerk-looking token (unknown signature) is rejected with 401', as
   assert.equal((await whoami(tokenFor('clerk-mallory'))).status, 401);
 });
 
-test('a token claiming to be from an unrelated issuer goes to Firebase and is rejected with 401, not 500', async () => {
+test('a token claiming to be from an unrelated issuer is rejected with 401, not 500', async () => {
   const forged = `${Buffer.from('{"alg":"none"}').toString('base64url')}.${Buffer.from('{"iss":"https://evil.test","sub":"user_alice"}').toString('base64url')}.`;
   const r = await whoami(forged);
   assert.equal(r.status, 401);
@@ -36,16 +36,8 @@ test('garbage tokens are rejected with 401', async () => {
   assert.equal((await whoami('a.b.c')).status, 401);
 });
 
-test('a valid Firebase ID token (mobile app) is accepted', async () => {
-  assert.equal((await whoami('fb-carol')).status, 200);
-});
-
-test('an expired Firebase ID token is rejected with 401', async () => {
-  assert.equal((await whoami('fb-expired')).status, 401);
-});
-
 test('non-Bearer schemes are rejected', async () => {
-  const r = await call('GET', '/api/firestore/user/profile', { headers: { Authorization: `Basic ${tokenFor('clerk-alice')}` } });
+  const r = await call('GET', '/api/data/user/profile', { headers: { Authorization: `Basic ${tokenFor('clerk-alice')}` } });
   assert.equal(r.status, 401);
 });
 

@@ -61,7 +61,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (!res.ok) throw new ApiError(data?.error?.message ?? `Server error (${res.status})`, res.status);
 
   // Anything that records a result makes cached history out of date.
-  if (method !== "GET" && /^\/api\/(evaluat|ppdt|tat|firestore)/.test(path)) useStore.getState().invalidateHistory();
+  if (method !== "GET" && /^\/api\/(evaluat|ppdt|tat|data)/.test(path)) useStore.getState().invalidateHistory();
   return data as T;
 }
 
@@ -72,3 +72,31 @@ export const api = {
   put: <T>(path: string, body: unknown) => request<T>("PUT", path, body),
   del: <T>(path: string) => request<T>("DELETE", path),
 };
+
+const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, "");
+
+/** Payments live in the lifetime-premium Supabase edge function. Same Clerk login, same ApiError shape. */
+export async function payments<T>(body: Record<string, unknown>): Promise<T> {
+  if (!SUPABASE_URL) throw new ApiError("Payments are not configured.", 0);
+  const clerk = await clerkReady();
+  const call = async (skipCache: boolean) => {
+    const token = (await clerk.session?.getToken(skipCache ? { skipCache: true } : undefined)) ?? "";
+    return fetch(`${SUPABASE_URL}/functions/v1/lifetime-premium`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+  };
+
+  let res: Response;
+  try {
+    res = await call(false);
+    // The function answers 400 for a bad token too; a retry with a fresh token covers a just-expired cache.
+    if (res.status === 401 && clerk.session) res = await call(true);
+  } catch {
+    throw new ApiError("Could not reach the server. Check your connection.", 0);
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(typeof data?.error === "string" ? data.error : `Server error (${res.status})`, res.status);
+  return data as T;
+}

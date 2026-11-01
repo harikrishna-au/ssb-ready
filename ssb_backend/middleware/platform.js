@@ -47,7 +47,7 @@ function accessLog(req, res, next) {
   res.on('finish', () => {
     if (req.path === '/api/health' || req.path === '/api/health/') return;
     const ms = Number(process.hrtime.bigint() - start) / 1e6;
-    const uid = req.firebaseUser?.uid;
+    const uid = req.authUser?.uid;
     logger.info('request', {
       requestId: req.requestId,
       method: req.method,

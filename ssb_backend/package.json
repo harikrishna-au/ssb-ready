@@ -9,10 +9,7 @@
     "dev": "NODE_ENV=development node server.js",
     "check": "node -e \"require('./config').loadEnv(); require('./app').createApp(); console.log('App bootstrap check passed')\"",
     "oir:extract-pdf": "python3 scripts/extract_pdf_pages.py",
-    "oir:import-images": "node scripts/import_oir_images.js",
     "psychology:import-images": "node scripts/import_psychology_images.js",
-    "oir:purge": "node scripts/purge_oir_questions.js",
-    "oir:purge-images": "node scripts/purge_oir_questions.js --only-with-image",
     "test": "node --test tests/ test/",
     "audit": "npm audit --omit=dev --audit-level=high",
     "radar:seed": "node scripts/seed_radar.js",
@@ -25,13 +22,16 @@
     "@clerk/backend": "^3.26.4",
     "@sentry/node": "^11.10.0",
     "@supabase/supabase-js": "^2.49.8",
+    "@vendia/serverless-express": "^4.12.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
-    "firebase-admin": "^13.9.0",
     "helmet": "^8.3.0",
     "openai": "^4.104.0",
     "ws": "^8.20.0",
     "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "jose": "^6.2.14"
   }
 }

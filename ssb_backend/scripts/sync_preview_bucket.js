@@ -10,7 +10,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { FREE_LIMIT, BUCKET, PREVIEW_BUCKET } = require('../services/storyImages');
 
 (async () => {
-  const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY, { auth: { persistSession: false } });
+  const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY, { auth: { persistSession: false } });
   const { data, error } = await sb.storage.from(BUCKET).list('ppdt', { limit: 500 });
   if (error) throw new Error(`list failed: ${error.message}`);
   const n = (s) => Number((s.match(/(\d+)(?=\.\w+$)/) || [0, 0])[1]);

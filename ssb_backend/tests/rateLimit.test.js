@@ -6,7 +6,7 @@ const { createRateLimiter } = require('../middleware/rateLimit');
 // Limits are read from env when limiters are created, so reload the modules that hold them.
 function freshModules() {
   for (const m of ['../middleware/rateLimit', '../middleware/guard', '../middleware/platform', '../app',
-    '../routes/evaluationRoutes', '../routes/evaluationPipelineRoutes', '../routes/firestoreRoutes', '../routes/imageRoutes',
+    '../routes/evaluationRoutes', '../routes/evaluationPipelineRoutes', '../routes/dataRoutes', '../routes/imageRoutes',
     '../routes/interviewRoutes', '../routes/ppdtRoutes', '../routes/tatRoutes', '../routes/accountRoutes']) delete require.cache[require.resolve(m)];
 }
 

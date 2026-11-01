@@ -24,7 +24,7 @@ test('CORS: allowed origin is echoed, unknown origin gets no CORS headers', asyn
 });
 
 test('CORS preflight from an unknown origin is not approved', async () => {
-  const r = await call('OPTIONS', '/api/firestore/piq', { headers: { Origin: 'https://evil.test', 'Access-Control-Request-Method': 'POST' } });
+  const r = await call('OPTIONS', '/api/data/piq', { headers: { Origin: 'https://evil.test', 'Access-Control-Request-Method': 'POST' } });
   assert.equal(r.headers.get('access-control-allow-origin'), null);
 });
 
@@ -48,7 +48,7 @@ test('GET /api/health is cheap liveness', async () => {
 
 test('health checks report only ok/fail per dependency and never error text', async () => {
   const probes = {
-    firestore: async () => { throw new Error('secret-project-id-123 permission denied'); },
+    database: async () => { throw new Error('secret-project-id-123 permission denied'); },
     supabase: async () => {},
     openai: () => new Promise(() => {}) // hangs: must time out
   };
@@ -56,7 +56,7 @@ test('health checks report only ok/fail per dependency and never error text', as
   delete require.cache[require.resolve('../services/healthChecks')];
   const { runHealthChecks: fresh } = require('../services/healthChecks');
   const r = await fresh({ probes, useCache: false });
-  assert.deepEqual(r, { ok: false, checks: { firestore: 'fail', supabase: 'ok', openai: 'fail' } });
+  assert.deepEqual(r, { ok: false, checks: { database: 'fail', supabase: 'ok', openai: 'fail' } });
   assert.ok(!JSON.stringify(r).includes('secret'));
   delete process.env.HEALTH_CHECK_TIMEOUT_MS;
   const all = await runHealthChecks({ probes: { a: async () => {} }, useCache: false });

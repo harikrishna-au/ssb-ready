@@ -18,7 +18,7 @@ const {
   upsertUserProfile,
   getUserProfile,
   updateUserType
-} = require('../controllers/firestoreController');
+} = require('../controllers/dataController');
 
 const router = express.Router({ caseSensitive: true });
 

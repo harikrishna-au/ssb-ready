@@ -1,5 +1,8 @@
 # SSBReady — AI-Powered SSB Interview Preparation
 
+> **Update (Nov 2026):** the web app (`ssb_web`) and backend (`ssb_backend`) use **Clerk** for login and **Supabase** for all data. They contain no Firebase. Mentions of Firebase/Firestore below describe the legacy Flutter app (`ssb_ready_app`), which has not been migrated.
+
+
 > A full-stack mobile application that helps Indian defense aspirants prepare for the **Services Selection Board (SSB)** — the interview and selection process for becoming an officer in the Army, Navy, or Air Force.
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)

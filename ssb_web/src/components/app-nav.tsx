@@ -11,7 +11,7 @@ import { appCrumbs, backTarget } from "@/lib/nav";
 import { Breadcrumbs } from "./breadcrumbs";
 import { Logo } from "./site/header";
 
-type Item = { href: string; label: string; icon: typeof Home };
+type Item = { href: string; label: string; icon: typeof Home; /** Shorter label for the phone tab bar */ short?: string };
 
 const PRACTISE: Item[] = [
   { href: "/dashboard", label: "Home", icon: Home },
@@ -19,13 +19,13 @@ const PRACTISE: Item[] = [
   { href: "/interview-guide", label: "Interview", icon: MessagesSquare },
 ];
 const TRACK: Item[] = [
-  { href: "/applications", label: "Applications", icon: ListChecks },
-  { href: "/olq-profile", label: "OLQ Profile", icon: Target },
+  { href: "/applications", label: "Applications", icon: ListChecks, short: "Apply" },
+  { href: "/olq-profile", label: "OLQ Profile", icon: Target, short: "OLQs" },
   { href: "/history", label: "Progress", icon: BarChart3 },
   { href: "/radar", label: "Radar", icon: Radar },
 ];
 const PROFILE: Item[] = [{ href: "/piq", label: "PIQ", icon: FileUser }];
-const MOBILE: Item[] = [PRACTISE[0], PRACTISE[1], PRACTISE[2], TRACK[0], PROFILE[0]];
+const MOBILE: Item[] = [PRACTISE[0], PRACTISE[1], PRACTISE[2], TRACK[0], TRACK[1], PROFILE[0]];
 
 const isActive = (path: string, href: string) =>
   path === href ||
@@ -101,7 +101,7 @@ export function TopBar() {
       {back?.href && (
         <Link
           href={back.href} aria-label={`Back to ${back.label}`}
-          className="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-muted-foreground transition-colors hover:border-white/30 hover:text-foreground"
+          className="grid size-11 shrink-0 place-items-center rounded-full border md:size-9 border-white/10 text-muted-foreground transition-colors hover:border-white/30 hover:text-foreground"
         >
           <ArrowLeft className="size-4" aria-hidden />
         </Link>
@@ -123,17 +123,17 @@ export function BottomNav() {
   const piqIncomplete = piq.ready && !piq.completeness.complete;
   return (
     <nav aria-label="App" className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
-      <ul className="mx-auto grid max-w-lg grid-cols-5">
-        {MOBILE.map(({ href, label, icon: Icon }) => {
+      <ul className="mx-auto grid max-w-lg grid-cols-6">
+        {MOBILE.map(({ href, label, short, icon: Icon }) => {
           const on = isActive(path, href);
           return (
             <li key={href}>
               <Link href={href} aria-current={on ? "page" : undefined} className={`flex min-h-14 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors ${on ? "text-primary" : "text-muted-foreground"}`}>
-                <span className={`relative grid h-7 w-12 place-items-center rounded-full transition-colors ${on ? "bg-primary/15" : ""}`}>
+                <span className={`relative grid h-7 w-10 place-items-center rounded-full transition-colors ${on ? "bg-primary/15" : ""}`}>
                   <Icon className="size-5" aria-hidden />
-                  {href === "/piq" && piqIncomplete && <span className="absolute right-2.5 top-0.5 size-2 rounded-full bg-brass" aria-label="PIQ incomplete" />}
+                  {href === "/piq" && piqIncomplete && <span className="absolute right-1.5 top-0.5 size-2 rounded-full bg-brass" aria-label="PIQ incomplete" />}
                 </span>
-                {label}
+                {short ?? label}
               </Link>
             </li>
           );

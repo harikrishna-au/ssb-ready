@@ -1,4 +1,4 @@
-const { db } = require('../config/firebase');
+const { db } = require('../config/db');
 const { getOirSetScore } = require('./contentBank');
 const { evaluateWat, evaluateSrt, evaluateSdt, generateInterviewReply } = require('./aiService');
 

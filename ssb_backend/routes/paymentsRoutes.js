@@ -10,7 +10,7 @@ const router = express.Router();
 
 // POST /api/payments/order  (body is ignored: the amount and plan are fixed on the server)
 router.post('/order', ...guard({ limits: ['write'] }), asyncHandler(async (req, res) => {
-  const out = await payments.createOrder({ userId: req.firebaseUser.uid, email: req.firebaseUser.email || '' });
+  const out = await payments.createOrder({ userId: req.authUser.uid, email: req.authUser.email || '' });
   res.json({ success: true, ...out });
 }));
 
@@ -18,19 +18,19 @@ router.post('/order', ...guard({ limits: ['write'] }), asyncHandler(async (req, 
 router.post('/verify', ...guard({ schema: schemas.paymentVerify, limits: ['write'] }), asyncHandler(async (req, res) => {
   const b = req.body || {};
   const out = await payments.verifyPayment({
-    userId: req.firebaseUser.uid, orderId: b.razorpay_order_id, paymentId: b.razorpay_payment_id, signature: b.razorpay_signature
+    userId: req.authUser.uid, orderId: b.razorpay_order_id, paymentId: b.razorpay_payment_id, signature: b.razorpay_signature
   });
   res.status(out.status === 'paid' ? 200 : 202).json({ success: true, ...out });
 }));
 
 // GET /api/payments/order/:orderId  (poll after a redirect, in case the webhook finished first)
 router.get('/order/:orderId', ...guard({ limits: ['write'] }), asyncHandler(async (req, res) => {
-  res.json({ success: true, ...(await payments.orderStatus({ userId: req.firebaseUser.uid, orderId: req.params.orderId })) });
+  res.json({ success: true, ...(await payments.orderStatus({ userId: req.authUser.uid, orderId: req.params.orderId })) });
 }));
 
 // GET /api/payments/history  -> payment history and receipt details for /billing
 router.get('/history', ...guard({ limits: ['write'] }), asyncHandler(async (req, res) => {
-  const [items, ent] = await Promise.all([payments.listPayments(req.firebaseUser.uid), getEntitlement(req.firebaseUser.uid)]);
+  const [items, ent] = await Promise.all([payments.listPayments(req.authUser.uid), getEntitlement(req.authUser.uid)]);
   res.json({ success: true, premium: ent.premium, items });
 }));
 

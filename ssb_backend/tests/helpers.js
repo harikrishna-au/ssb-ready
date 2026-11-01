@@ -1,6 +1,6 @@
 /**
- * Test harness: boots the real Express app with in-memory fakes for Firestore, Supabase, Clerk,
- * Firebase Auth and OpenAI. Nothing here touches the network.
+ * Test harness: boots the real Express app with in-memory fakes for the database, Supabase, Clerk,
+ * and OpenAI. Nothing here touches the network.
  * Other agents: require('./helpers') FIRST in your test file, then use makeApp() / api().
  */
 const path = require('path');
@@ -21,8 +21,8 @@ const stub = (rel, exports) => {
   require.cache[file] = { id: file, filename: file, loaded: true, exports };
 };
 
-// ---- tiny in-memory Firestore -------------------------------------------------------------
-class FakeFirestore {
+// ---- tiny in-memory document store -------------------------------------------------------------
+class FakeDocStore {
   constructor() { this.data = new Map(); this.seq = 0; }
   col(name) { if (!this.data.has(name)) this.data.set(name, new Map()); return this.data.get(name); }
   collection(name) { return new Query(this, name); }
@@ -87,7 +87,7 @@ class FakeSupabase {
 
 // ---- shared mutable fakes -----------------------------------------------------------------
 const state = {
-  db: new FakeFirestore(),
+  db: new FakeDocStore(),
   supabase: new FakeSupabase(),
   deletedIdentities: [],
   ai: { calls: [] }
@@ -97,7 +97,6 @@ const users = {
   'clerk-alice': { sub: 'user_alice', email: 'alice@example.test' },
   'clerk-bob': { sub: 'user_bob', email: 'bob@example.test' }
 };
-const firebaseUsers = { 'fb-carol': { uid: 'fb_carol', email: 'carol@example.test' } };
 
 const jwtLike = (name, iss = 'https://x.clerk.accounts.dev') =>
   `${Buffer.from('{"alg":"RS256"}').toString('base64url')}.${Buffer.from(JSON.stringify({ iss, name })).toString('base64url')}.sig`;
@@ -105,18 +104,12 @@ const jwtLike = (name, iss = 'https://x.clerk.accounts.dev') =>
 const tokens = {};
 const tokenFor = (name) => (tokens[name] ||= jwtLike(name));
 
-stub('config/firebase.js', {
+stub('config/db.js', {
   db: { collection: (n) => state.db.collection(n), batch: () => state.db.batch() },
-  admin: {
-    auth: () => ({
-      verifyIdToken: async (t) => {
-        if (firebaseUsers[t]) return { ...firebaseUsers[t] };
-        throw Object.assign(new Error('Firebase ID token has expired / invalid'), { code: 'auth/id-token-expired' });
-      },
-      deleteUser: async (uid) => state.deletedIdentities.push(`firebase:${uid}`)
-    })
-  }
+  keyRole: () => null,
+  TABLE: 'app_docs'
 });
+
 stub('config/supabase.js', new Proxy({}, { get: (_, k) => state.supabase[k]?.bind?.(state.supabase) ?? state.supabase[k] }));
 
 // Clerk: only tokens we minted for known users verify.
@@ -172,10 +165,10 @@ const api = (url) => async (method, p, { body, token, headers = {}, raw } = {}) 
 };
 
 function reset() {
-  state.db = new FakeFirestore();
+  state.db = new FakeDocStore();
   state.supabase = new FakeSupabase();
   state.deletedIdentities.length = 0;
   state.ai.calls.length = 0;
 }
 
-module.exports = { makeApp, api, state, tokenFor, reset, firebaseUsers, root };
+module.exports = { makeApp, api, state, tokenFor, reset, root };

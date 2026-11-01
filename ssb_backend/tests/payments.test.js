@@ -10,15 +10,13 @@ process.env.RAZORPAY_WEBHOOK_SECRET = 'fixture_webhook_secret';
 
 const fake = createFake({
   payment_transactions: [['order_id'], ['payment_id'], ['txnid']],
-  payment_events: [['event_id']],
-  user_identities: [['clerk_id'], ['firebase_uid']]
+  payment_events: [['event_id']]
 });
 const supaPath = require.resolve(path.join(__dirname, '../config/supabase'));
 require.cache[supaPath] = { id: supaPath, filename: supaPath, loaded: true, exports: fake };
 
 const payments = require('../services/payments');
 const premium = require('../services/premium');
-const identity = require('../services/identity');
 const { piqCompleteness } = require('../services/paymentsPiq');
 
 const NOW = new Date('2026-11-02T10:00:00Z');
@@ -255,44 +253,6 @@ test('entitlement: expired, inactive and missing rows are free; errors fail clos
   assert.equal(await premium.isPremium(''), false);
   const e = await premium.getEntitlement('u_ok');
   assert.deepEqual([e.premium, e.plan, e.premiumSince], [true, 'lifetime', '2026-01-01T00:00:00Z']);
-});
-
-test('identity: a mobile purchase is premium on web after linking, and vice versa', async () => {
-  fake.tables.premium_members.push({ user_id: 'fb_uid_1', subscription_status: 'active', plan_type: 'lifetime' });
-  assert.equal(await premium.isPremium('user_web1'), false);
-  Object.assign(identity.deps, {
-    clerkVerifiedEmails: async () => ['a@x.com'],
-    firebaseByEmail: async () => ({ uid: 'fb_uid_1', emailVerified: true })
-  });
-  const r = await identity.linkByVerifiedEmail('user_web1');
-  assert.equal(r.linked, true);
-  premium.invalidate();
-  assert.equal(await premium.isPremium('user_web1'), true, 'web login sees the mobile purchase');
-  assert.equal(await premium.isPremium('fb_uid_1'), true);
-
-  fake.tables.premium_members.length = 0; premium.invalidate();
-  fake.tables.premium_members.push({ user_id: 'user_web1', subscription_status: 'active' });
-  assert.equal(await premium.isPremium('fb_uid_1'), true, 'mobile login sees the web purchase');
-});
-
-test('identity: unverified Firebase email is never linked', async () => {
-  Object.assign(identity.deps, {
-    clerkVerifiedEmails: async () => ['a@x.com'],
-    firebaseByEmail: async () => ({ uid: 'fb_uid_2', emailVerified: false })
-  });
-  const r = await identity.linkByVerifiedEmail('user_web2');
-  assert.equal(r.linked, false); assert.equal(r.reason, 'no_matching_account');
-  assert.equal(fake.tables.user_identities.length, 0);
-});
-
-test('identity: Firebase caller needs a verified email, and a taken link is a conflict', async () => {
-  Object.assign(identity.deps, { firebaseUser: async () => ({ uid: 'fb_9', email: 'a@x.com', emailVerified: false }) });
-  assert.equal((await identity.linkByVerifiedEmail('fb_9')).reason, 'email_not_verified');
-
-  fake.tables.user_identities.push({ clerk_id: 'user_other', firebase_uid: 'fb_9' });
-  Object.assign(identity.deps, { clerkVerifiedEmails: async () => ['a@x.com'], firebaseByEmail: async () => ({ uid: 'fb_9', emailVerified: true }) });
-  const r = await identity.linkByVerifiedEmail('user_web3'); // fb_9 already belongs to user_other
-  assert.equal(r.linked, false); assert.equal(r.reason, 'conflict');
 });
 
 test('HTTP: webhook reads the raw body; routes require auth', async () => {

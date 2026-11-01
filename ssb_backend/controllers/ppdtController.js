@@ -1,5 +1,5 @@
 const { asyncHandler } = require('../middleware/asyncHandler');
-const { db } = require('../config/firebase');
+const { db } = require('../config/db');
 const { evaluatePpdtPipeline, ocrHandwrittenImage } = require('../services/aiService');
 const { resolveImage } = require('../services/storyImages');
 
@@ -23,7 +23,7 @@ const extractWrittenPaperText = asyncHandler(async (req, res) => {
 });
 
 const runPpdtPipeline = asyncHandler(async (req, res) => {
-  const userId = req.firebaseUser.uid;
+  const userId = req.authUser.uid;
   const { imageId, imageUrl, imageToken, storyMode, storyText, handwrittenText, perception } = req.body;
 
   const finalStory = (storyText || handwrittenText || '').trim();

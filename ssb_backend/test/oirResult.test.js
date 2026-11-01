@@ -5,7 +5,7 @@ process.env.SUPABASE_URL = 'https://stub.supabase.co';
 process.env.SUPABASE_KEY = 'stub';
 process.env.JWT_SECRET = 'x';
 
-// Stub firebase db and contentBank scoring through require.cache.
+// Stub the database and contentBank scoring through require.cache.
 const results = new Map();
 const fakeDb = {
   collection: () => ({
@@ -17,7 +17,7 @@ const fakeDb = {
   })
 };
 const put = (rel, exports) => { const k = require.resolve(rel); require.cache[k] = { id: k, filename: k, loaded: true, exports }; };
-put('../config/firebase', { db: fakeDb, admin: {} });
+put('../config/db', { db: fakeDb });
 put('../config/supabase', {});
 put('../services/aiService', {});
 const serverScore = { score: 3, total: 10, ranked: true };

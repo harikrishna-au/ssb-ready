@@ -13,9 +13,10 @@ function withTimeout(promise, ms = TIMEOUT_MS) {
 
 /** Default probes. Each resolves on success and throws on failure; details are never exposed. */
 const defaultProbes = {
-  firestore: async () => {
-    const { db } = require('../config/firebase');
-    await db.collection('piqs').limit(1).select().get();
+  // The user-data database (Supabase Postgres). Also fails if the backend holds the anon key instead of the service-role key.
+  database: async () => {
+    const { db } = require('../config/db');
+    await db.collection('piqs').limit(1).get();
   },
   supabase: async () => {
     const supabase = require('../config/supabase');

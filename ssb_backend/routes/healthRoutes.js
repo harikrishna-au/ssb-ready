@@ -9,7 +9,7 @@ router.get('/', (_req, res) => {
   res.json({ success: true, status: 'ok' });
 });
 
-// Dependency check: Firestore, Supabase and OpenAI. Returns only ok/fail per dependency, never error text.
+// Dependency check: the database, Supabase storage and OpenAI. Returns only ok/fail per dependency, never error text.
 // 200 when everything is reachable, 503 otherwise. Point an uptime monitor at this path.
 const ready = asyncHandler(async (_req, res) => {
   const { ok, checks } = await runHealthChecks();

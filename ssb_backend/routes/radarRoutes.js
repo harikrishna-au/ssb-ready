@@ -13,8 +13,8 @@ const SITE = () => (process.env.RADAR_SITE_URL || 'https://readykadet.com').repl
 const csv = (v) => (v || '').split(',').map((s) => s.trim()).filter(Boolean);
 const safeEq = (a, b) => { const x = Buffer.from(String(a)); const y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
 
-/** Default auth: Clerk/Firebase token via the shared middleware, loaded lazily so tests need no Firebase. */
-const defaultAuth = (req, res, next) => require('../middleware/firebaseAuthMiddleware').firebaseProtect(req, res, next);
+/** Default auth: the shared Clerk login check, loaded lazily so tests can inject their own. */
+const defaultAuth = (req, res, next) => require('../middleware/auth').requireAuth(req, res, next);
 
 /** Admin = uid in RADAR_ADMIN_USER_IDS, or Clerk publicMetadata.role === 'admin'. */
 async function defaultIsAdmin(uid) {
@@ -58,7 +58,7 @@ function createRadarRouter(deps = {}) {
     });
   };
   const adminOnly = [...gated(['write']), asyncHandler(async (req, _res, next) => {
-    if (!(await isAdmin(req.firebaseUser.uid))) throw httpError(403, 'Admins only.');
+    if (!(await isAdmin(req.authUser.uid))) throw httpError(403, 'Admins only.');
     next();
   })];
   const cronOnly = (req, _res, next) => {
@@ -112,37 +112,35 @@ function createRadarRouter(deps = {}) {
 
   // ---- signed-in user: tracker + prefs ----------------------------------
   router.get('/tracker', ...gated(), asyncHandler(async (req, res) => {
-    res.json({ success: true, ...(await svc().getTracker(req.firebaseUser.uid)) });
+    res.json({ success: true, ...(await svc().getTracker(req.authUser.uid)) });
   }));
   router.put('/tracker/:id', ...gated(), asyncHandler(async (req, res) => {
     const { status, note } = req.body || {};
-    res.json({ success: true, entry: await svc().setTracked(req.firebaseUser.uid, req.params.id, { status, note }) });
+    res.json({ success: true, entry: await svc().setTracked(req.authUser.uid, req.params.id, { status, note }) });
   }));
   router.delete('/tracker/:id', ...gated(), asyncHandler(async (req, res) => {
-    await svc().removeTracked(req.firebaseUser.uid, req.params.id);
+    await svc().removeTracked(req.authUser.uid, req.params.id);
     res.json({ success: true });
   }));
   router.post('/tracker/import', ...gated(), asyncHandler(async (req, res) => {
-    res.json({ success: true, ...(await svc().importLegacy(req.firebaseUser.uid, req.body?.apps)) });
+    res.json({ success: true, ...(await svc().importLegacy(req.authUser.uid, req.body?.apps)) });
   }));
 
   const prefsOut = (p) => ({ remindersEnabled: p.remindersEnabled, digest: p.digest, hasEmail: !!p.email, confirmed: !!p.email && p.emailConfirmedFor === p.email, timezone: p.timezone });
   router.get('/prefs', ...gated(), asyncHandler(async (req, res) => {
-    res.json({ success: true, prefs: prefsOut(await svc().getPrefs(req.firebaseUser.uid)) });
+    res.json({ success: true, prefs: prefsOut(await svc().getPrefs(req.authUser.uid)) });
   }));
 
   /**
    * The address is never taken from the request body. It must come from a source that has verified it:
-   * a Firebase token with email_verified === true, or a Clerk primary address with verification 'verified'.
-   * A token's own email claim is ignored for Clerk users because it carries no verification flag.
+   * the user's Clerk primary address, and only when Clerk reports it as verified.
+   * A token's own email claim is ignored because it carries no verification flag.
    */
   async function verifiedEmail(req) {
-    const u = req.firebaseUser;
-    if (u.email_verified !== undefined) return u.email_verified === true && u.email ? u.email : '';
-    return emailOf(u.uid);
+    return emailOf(req.authUser.uid);
   }
   router.put('/prefs', ...gated(), asyncHandler(async (req, res) => {
-    const uid = req.firebaseUser.uid;
+    const uid = req.authUser.uid;
     const wantsMail = req.body?.remindersEnabled === true || req.body?.digest === true;
     const email = await verifiedEmail(req);
     if (wantsMail && !email) {
@@ -184,26 +182,26 @@ function createRadarRouter(deps = {}) {
     res.json({ success: true, item, problems: core.publishProblems(item), history: await store.listHistory(item.id) });
   }));
   router.post('/admin/items', ...adminOnly, asyncHandler(async (req, res) => {
-    res.status(201).json({ success: true, item: await svc().create(req.body || {}, req.firebaseUser.uid) });
+    res.status(201).json({ success: true, item: await svc().create(req.body || {}, req.authUser.uid) });
   }));
   router.patch('/admin/items/:id', ...adminOnly, asyncHandler(async (req, res) => {
-    res.json({ success: true, item: await svc().update(req.params.id, req.body || {}, req.firebaseUser.uid) });
+    res.json({ success: true, item: await svc().update(req.params.id, req.body || {}, req.authUser.uid) });
   }));
   router.post('/admin/items/:id/publish', ...adminOnly, asyncHandler(async (req, res) => {
-    res.json({ success: true, item: await svc().publish(req.params.id, req.firebaseUser.uid) });
+    res.json({ success: true, item: await svc().publish(req.params.id, req.authUser.uid) });
   }));
   router.post('/admin/items/:id/archive', ...adminOnly, asyncHandler(async (req, res) => {
-    res.json({ success: true, item: await svc().archive(req.params.id, req.firebaseUser.uid) });
+    res.json({ success: true, item: await svc().archive(req.params.id, req.authUser.uid) });
   }));
   router.post('/admin/items/:id/verified', ...adminOnly, asyncHandler(async (req, res) => {
-    res.json({ success: true, item: await svc().stampVerified(req.params.id, req.firebaseUser.uid, core.istToday(nowMs())) });
+    res.json({ success: true, item: await svc().stampVerified(req.params.id, req.authUser.uid, core.istToday(nowMs())) });
   }));
   router.get('/admin/reviews', ...adminOnly, asyncHandler(async (req, res) => {
     res.json({ success: true, reviews: await getStore().listReviews(req.query.status === 'done' ? 'done' : req.query.status === 'dismissed' ? 'dismissed' : 'open'), sources: await getStore().listSources().then((s) => s.map(({ contentText, ...r }) => r)) }); // eslint-disable-line no-unused-vars
   }));
   router.post('/admin/reviews/:id/resolve', ...adminOnly, asyncHandler(async (req, res) => {
     const status = req.body?.status === 'dismissed' ? 'dismissed' : 'done';
-    const r = await getStore().resolveReview(req.params.id, status, req.firebaseUser.uid, new Date(nowMs()).toISOString());
+    const r = await getStore().resolveReview(req.params.id, status, req.authUser.uid, new Date(nowMs()).toISOString());
     if (!r) throw httpError(404, 'Not found.');
     res.json({ success: true, review: r });
   }));

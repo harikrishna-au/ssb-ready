@@ -49,7 +49,8 @@ const config = Object.freeze({
 
   supabase: Object.freeze({
     url: process.env.SUPABASE_URL,
-    key: process.env.SUPABASE_KEY
+    // The backend needs the service-role key: user data lives in a private table (see config/db.js).
+    key: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY
   }),
 
   openai: Object.freeze({
@@ -66,12 +67,6 @@ const config = Object.freeze({
       'gpt-4o-mini',
     maxPromptChars: Number(process.env.AI_PROMPT_MAX_CHARS || 12000)
   }),
-
-  firebase: Object.freeze({
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || '',
-    serviceAccountJson: process.env.FIREBASE_SERVICE_ACCOUNT_JSON || ''
-  })
 });
 
 /**

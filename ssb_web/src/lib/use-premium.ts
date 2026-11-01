@@ -20,35 +20,15 @@ const usePremiumStore = create<Slice>((set) => ({ userId: null, status: "idle", 
 
 let inflight: Promise<void> | null = null;
 
-const linkKey = (userId: string) => `rk-link-tried:${userId}`;
-function alreadyTriedLink(userId: string) {
-  try { return sessionStorage.getItem(linkKey(userId)) === "1"; } catch { return false; }
-}
-function markLinkTried(userId: string) {
-  try { sessionStorage.setItem(linkKey(userId), "1"); } catch { /* private mode: we will just try again next load */ }
-}
-
-/**
- * Asks the server who this is. A free account also gets one best-effort attempt per browser session
- * to link itself to a mobile login with the same verified email, so a mobile purchase shows up here.
- */
-async function fetchMe(userId: string): Promise<Me> {
-  const me = await api.get<Me>("/api/me");
-  if (me.premium || alreadyTriedLink(userId)) return me;
-  markLinkTried(userId);
-  try {
-    const r = await api.post<{ premium: boolean }>("/api/me/link-identity", {});
-    if (r.premium) return await api.get<Me>("/api/me");
-  } catch { /* linking is optional; the answer we already have stands */ }
-  return me;
-}
+/** Asks the server who this is. The premium answer comes only from the server. */
+const fetchMe = () => api.get<Me>("/api/me");
 
 async function load(userId: string) {
   if (inflight) return inflight;
   const s = usePremiumStore.getState();
   // Keep showing the last known answer while refreshing the same user's data.
   usePremiumStore.setState({ userId, status: "loading", me: s.userId === userId ? s.me : null });
-  inflight = fetchMe(userId)
+  inflight = fetchMe()
     .then((me) => usePremiumStore.setState({ userId, status: "ready", me }))
     .catch(() => usePremiumStore.setState({ status: "error" }))
     .finally(() => { inflight = null; });

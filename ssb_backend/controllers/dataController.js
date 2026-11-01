@@ -1,8 +1,8 @@
-const { db } = require('../config/firebase');
+const { db } = require('../config/db');
 const { asyncHandler } = require('../middleware/asyncHandler');
 
 function ensureOwner(req, userId) {
-  if (!userId || userId !== req.firebaseUser.uid) {
+  if (!userId || userId !== req.authUser.uid) {
     const error = new Error('Forbidden: userId mismatch');
     error.statusCode = 403;
     throw error;
@@ -73,20 +73,20 @@ const getPiq = asyncHandler(async (req, res) => {
 });
 
 const upsertUserProfile = asyncHandler(async (req, res) => {
-  const uid = req.firebaseUser.uid;
-  const payload = { ...req.body, id: uid, email: req.firebaseUser.email || req.body.email || '' };
+  const uid = req.authUser.uid;
+  const payload = { ...req.body, id: uid, email: req.authUser.email || req.body.email || '' };
   await db.collection('users').doc(uid).set(payload, { merge: true });
   res.json({ success: true });
 });
 
 const getUserProfile = asyncHandler(async (req, res) => {
-  const uid = req.firebaseUser.uid;
+  const uid = req.authUser.uid;
   const doc = await db.collection('users').doc(uid).get();
   res.json({ success: true, data: doc.exists ? doc.data() : null });
 });
 
 const updateUserType = asyncHandler(async (req, res) => {
-  const uid = req.firebaseUser.uid;
+  const uid = req.authUser.uid;
   await db.collection('users').doc(uid).set({ userType: req.body.userType || '' }, { merge: true });
   res.json({ success: true });
 });

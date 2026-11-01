@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { payments } from "@/lib/api";
 
 export type PaymentItem = {
   orderId: string; paymentId: string | null; status: "paid" | "failed" | "refunded"; amountInr: number; currency: string;
@@ -19,7 +19,7 @@ export function usePayments() {
   const [state, setState] = useState<{ data: History | null; error: boolean; loading: boolean }>({ data: null, error: false, loading: true });
   useEffect(() => {
     let live = true;
-    api.get<History>("/api/payments/history")
+    payments<History>({ action: "history" })
       .then((data) => live && setState({ data, error: false, loading: false }))
       .catch(() => live && setState({ data: null, error: true, loading: false }));
     return () => { live = false; };
