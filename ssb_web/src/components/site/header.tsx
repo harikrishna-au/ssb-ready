@@ -2,6 +2,7 @@ import { Show, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { Suspense } from "react";
 import { MobileMenu } from "./mobile-menu";
+import { LinkButton } from "@/components/ui/link-button";
 
 /** ReadyKadet mark: two stacked chevrons on a blue tile. Source of truth: public/brand/mark.svg */
 export function LogoMark({ className = "size-8" }: { className?: string }) {
@@ -37,10 +38,10 @@ export function SiteHeader() {
           <Suspense>
             <Show when="signed-out">
               <Link href="/sign-in" className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground sm:block">Log in</Link>
-              <Link href="/sign-up" className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-px">Start free</Link>
+              <LinkButton href="/sign-up" variant="contained" size="small">Start free</LinkButton>
             </Show>
             <Show when="signed-in">
-              <Link href="/dashboard" className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-px">Dashboard</Link>
+              <LinkButton href="/dashboard" variant="contained" size="small">Dashboard</LinkButton>
               <UserButton />
             </Show>
           </Suspense>

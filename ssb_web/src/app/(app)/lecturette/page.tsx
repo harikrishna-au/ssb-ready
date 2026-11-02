@@ -5,6 +5,7 @@ import { ExamStage, PrimaryButton, TestIntro } from "@/components/exam/ui";
 import { fetchContent } from "@/lib/content";
 import { useCountdown } from "@/lib/use-countdown";
 import { useLeaveGuard } from "@/lib/use-leave-guard";
+import Button from "@mui/material/Button";
 
 const SPEAK_SECONDS = 180;
 const BELL_AT = 30; // seconds left
@@ -89,7 +90,7 @@ function Speaking({ topic, onDone }: { topic: string; onDone: (t: string) => voi
           <p className="mt-6 min-h-32 max-h-64 overflow-y-auto rounded-2xl border border-white/10 bg-card/60 p-5 text-lg leading-relaxed text-muted-foreground">
             {transcript || (supported ? "Your words will appear here as you speak…" : "Transcription is unavailable here. Just speak.")}
           </p>
-          <button onClick={stop} className="mt-6 inline-flex h-12 items-center rounded-full border border-white/20 px-7 font-semibold transition-colors hover:border-white/40">Finish early</button>
+          <Button onClick={stop} variant="outlined" color="inherit" size="large" sx={{ mt: 3 }}>Finish early</Button>
         </div>
       )}
     </ExamStage>

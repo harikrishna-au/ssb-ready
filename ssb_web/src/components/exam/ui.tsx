@@ -6,6 +6,16 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { Markdown } from "@/components/markdown";
 import { fmt } from "@/lib/use-countdown";
+import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
+import LinearProgress from "@mui/material/LinearProgress";
+import TextField from "@mui/material/TextField";
+import { LinkButton } from "@/components/ui/link-button";
 
 /* ───────────── Intro ───────────── */
 
@@ -91,12 +101,9 @@ export function TestIntro(props: {
 
 function StartButton(props: { onStart: () => void; loading?: boolean; startLabel?: string; className?: string }) {
   return (
-    <button
-      onClick={props.onStart} disabled={props.loading}
-      className={`inline-flex h-14 items-center justify-center rounded-full bg-primary px-9 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30 disabled:opacity-60 ${props.className ?? ""}`}
-    >
+    <Button variant="contained" size="large" onClick={props.onStart} disabled={props.loading} className={props.className} sx={{ minHeight: 56, px: 5, fontSize: "1rem", boxShadow: "0 10px 24px -8px var(--primary)" }}>
       {props.loading ? "Loading…" : (props.startLabel ?? "Start test")}
-    </button>
+    </Button>
   );
 }
 
@@ -154,12 +161,6 @@ export function ExamStage(props: {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
   }, []);
-  useEffect(() => {
-    if (!confirm) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setConfirm(false);
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [confirm]);
 
   const p = props.progress;
   return (
@@ -176,9 +177,7 @@ export function ExamStage(props: {
           {props.timer && <TimerPill {...props.timer} />}
         </div>
         {p && (
-          <div className="h-1 bg-white/5" role="progressbar" aria-valuemin={0} aria-valuemax={p.total} aria-valuenow={p.current}>
-            <div className="h-full bg-primary transition-[width] duration-500" style={{ width: `${(p.current / p.total) * 100}%` }} />
-          </div>
+          <LinearProgress variant="determinate" value={(p.current / p.total) * 100} aria-label="Test progress" sx={{ height: 4, borderRadius: 0 }} />
         )}
         {props.stepper && <Stepper {...props.stepper} />}
       </header>
@@ -188,18 +187,16 @@ export function ExamStage(props: {
       </main>
 
       {props.overlay}
-      {confirm && (
-        <div className="fixed inset-0 z-[70] grid place-items-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="leave-title">
-          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-card p-6">
-            <h2 id="leave-title" className="text-2xl font-extrabold uppercase">Leave this test?</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Your answers so far will be lost. On the real day there is no going back either.</p>
-            <div className="mt-6 flex gap-3">
-              <button autoFocus onClick={() => setConfirm(false)} className="h-11 flex-1 rounded-full bg-primary font-semibold text-primary-foreground">Keep going</button>
-              <button onClick={() => router.push("/tests")} className="h-11 flex-1 rounded-full border border-white/20 font-semibold hover:border-destructive hover:text-destructive">Leave</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog open={confirm} onClose={() => setConfirm(false)} sx={{ zIndex: 70 }} aria-labelledby="leave-title">
+        <DialogTitle id="leave-title" sx={{ fontWeight: 800, textTransform: "uppercase" }}>Leave this test?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>Your answers so far will be lost. On the real day there is no going back either.</DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 1, gap: 1 }}>
+          <Button color="inherit" variant="outlined" onClick={() => router.push("/tests")}>Leave</Button>
+          <Button autoFocus variant="contained" onClick={() => setConfirm(false)}>Keep going</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }
@@ -233,24 +230,17 @@ export function WritingPad(props: {
   const words = props.value.trim() ? props.value.trim().split(/\s+/).length : 0;
   return (
     <div>
-      <textarea
-        aria-label={props.label} autoFocus={props.autoFocus} rows={props.rows ?? 9}
-        value={props.value} onChange={(e) => props.onChange(e.target.value)} placeholder={props.placeholder}
-        className="w-full resize-none rounded-2xl border border-white/10 bg-card/60 p-4 text-base sm:p-5 sm:text-lg leading-relaxed outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary"
+      <TextField
+        multiline fullWidth minRows={props.rows ?? 9} autoFocus={props.autoFocus} value={props.value} placeholder={props.placeholder}
+        onChange={(e) => props.onChange(e.target.value)} slotProps={{ htmlInput: { "aria-label": props.label }, input: { sx: { fontSize: { xs: "1rem", sm: "1.125rem" }, lineHeight: 1.7, p: { xs: 2, sm: 2.5 } } } }}
       />
       <p className="mt-2 text-right text-xs text-muted-foreground">{words} {words === 1 ? "word" : "words"}</p>
     </div>
   );
 }
 
-export function PrimaryButton(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const { className = "", ...rest } = props;
-  return (
-    <button
-      {...rest}
-      className={`inline-flex h-12 items-center justify-center rounded-full bg-primary px-8 font-semibold text-primary-foreground transition-all hover:-translate-y-0.5 disabled:opacity-60 ${className}`}
-    />
-  );
+export function PrimaryButton(props: React.ComponentProps<typeof Button>) {
+  return <Button variant="contained" size="large" {...props} />;
 }
 
 /* ───────────── States ───────────── */
@@ -259,7 +249,7 @@ export function EvaluatingView({ label = "Scoring your answers" }: { label?: str
   return (
     <div className="grid min-h-[60vh] place-items-center text-center" role="status" aria-live="polite">
       <div>
-        <div className="mx-auto size-16 animate-spin rounded-full border-4 border-white/10 border-t-primary" aria-hidden />
+        <CircularProgress size={64} thickness={3} aria-hidden />
         <p className="mt-6 font-display text-4xl font-black uppercase">{label}</p>
         <p className="mt-2 text-muted-foreground">Matching what you wrote to Officer Like Qualities.</p>
       </div>
@@ -274,7 +264,7 @@ export function ErrorView({ message, onRetry }: { message: string; onRetry?: () 
       <p className="mt-3 text-muted-foreground">{message}</p>
       <div className="mt-6 flex justify-center gap-3">
         {onRetry && <PrimaryButton onClick={onRetry}>Try again</PrimaryButton>}
-        <Link href="/tests" className="inline-flex h-12 items-center rounded-full border border-white/20 px-6 font-semibold hover:border-white/40">Back to tests</Link>
+        <LinkButton href="/tests" variant="outlined" color="inherit">Back to tests</LinkButton>
       </div>
     </div>
   );
@@ -349,8 +339,8 @@ export function ScoreResult(props: {
 
       <div className="flex flex-wrap gap-3">
         <PrimaryButton onClick={props.onRetry}>{props.retryLabel ?? "Try again"}</PrimaryButton>
-        <Link href="/history" className="inline-flex h-12 items-center justify-center rounded-full border border-white/20 px-7 font-semibold transition-colors hover:border-white/40">View progress</Link>
-        <Link href="/tests" className="inline-flex h-12 items-center rounded-full px-5 font-semibold text-muted-foreground transition-colors hover:text-foreground">Another test</Link>
+        <LinkButton href="/history" variant="outlined" color="inherit" size="large">View progress</LinkButton>
+        <LinkButton href="/tests" color="inherit" size="large" sx={{ color: "text.secondary" }}>Another test</LinkButton>
       </div>
       <p className="text-xs text-muted-foreground">AI feedback helps you practise. It is not an official assessment or a prediction of the board&apos;s decision.</p>
     </div>
@@ -427,25 +417,18 @@ export function ModeSwitch(props: {
 
 /** "Submit before the time is up?" prompt. Shows the time left so the choice is informed. */
 export function SubmitEarlyDialog(props: { open: boolean; left: number; onConfirm: () => void; onCancel: () => void }) {
-  useEffect(() => {
-    if (!props.open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && props.onCancel();
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [props]);
-  if (!props.open) return null;
   return (
-    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="submit-early-title">
-      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-card p-6">
-        <h2 id="submit-early-title" className="text-2xl font-extrabold uppercase">Submit now?</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          You still have <span className="font-semibold tabular-nums text-foreground">{fmt(props.left)}</span> left. Once you submit, you can&apos;t edit your answer.
-        </p>
-        <div className="mt-6 flex gap-3">
-          <button autoFocus onClick={props.onCancel} className="h-11 flex-1 rounded-full border border-white/20 font-semibold hover:border-white/40">Keep writing</button>
-          <button onClick={props.onConfirm} className="h-11 flex-1 rounded-full bg-primary font-semibold text-primary-foreground">Submit</button>
-        </div>
-      </div>
-    </div>
+    <Dialog open={props.open} onClose={props.onCancel} sx={{ zIndex: 70 }} aria-labelledby="submit-early-title">
+      <DialogTitle id="submit-early-title" sx={{ fontWeight: 800, textTransform: "uppercase" }}>Submit now?</DialogTitle>
+      <DialogContent>
+        <DialogContentText>
+          You still have <b className="tabular-nums text-foreground">{fmt(props.left)}</b> left. Once you submit, you can&apos;t edit your answer.
+        </DialogContentText>
+      </DialogContent>
+      <DialogActions sx={{ p: 3, pt: 1, gap: 1 }}>
+        <Button autoFocus color="inherit" variant="outlined" onClick={props.onCancel}>Keep writing</Button>
+        <Button variant="contained" onClick={props.onConfirm}>Submit</Button>
+      </DialogActions>
+    </Dialog>
   );
 }

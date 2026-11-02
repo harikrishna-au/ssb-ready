@@ -2,6 +2,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata, Viewport } from "next";
 import { Big_Shoulders, Public_Sans } from "next/font/google";
 import { dark } from "@clerk/ui/themes";
+import { MuiProvider } from "@/components/mui-provider";
 import { SessionWatcher } from "@/components/session-watcher";
 import "./globals.css";
 
@@ -45,7 +46,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           appearance={{ theme: dark, variables: { colorPrimary: "#4b7bf5", colorBackground: "#1c1e2a", borderRadius: "0.75rem" } }}
           afterSignOutUrl="/" signInFallbackRedirectUrl="/dashboard" signUpFallbackRedirectUrl="/dashboard">
           <SessionWatcher />
-          {children}
+          <MuiProvider>{children}</MuiProvider>
         </ClerkProvider>
       </body>
     </html>

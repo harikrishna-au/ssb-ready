@@ -1,14 +1,14 @@
+"use client";
+
+import CircularProgress from "@mui/material/CircularProgress";
 import { LogoMark } from "@/components/site/header";
 
-/** Brand loader: the logo mark with a ring orbiting it. Respects reduced motion (ring stops, logo stays). */
+/** Brand loader: the logo mark inside a Material UI spinner. Reduced motion keeps the logo and slows the ring. */
 export function Loader({ size = 56, label }: { size?: number; label?: string }) {
   return (
     <div role="status" aria-live="polite" aria-label={label ?? "Loading"} className="inline-flex flex-col items-center gap-3">
       <div className="relative grid place-items-center" style={{ width: size, height: size }}>
-        <svg viewBox="0 0 100 100" className="loader-ring absolute inset-0" aria-hidden>
-          <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeOpacity="0.12" strokeWidth="4" />
-          <circle cx="50" cy="50" r="46" fill="none" stroke="var(--brass)" strokeWidth="4" strokeLinecap="round" strokeDasharray="72 217" />
-        </svg>
+        <CircularProgress color="secondary" size={size} thickness={3} aria-hidden sx={{ position: "absolute", inset: 0 }} />
         <LogoMark className="loader-logo" />
       </div>
       {label && <p className="text-sm text-muted-foreground">{label}</p>}

@@ -7,6 +7,10 @@ import { useStore } from "@/lib/store";
 import { TESTS as ALL_TESTS } from "@/lib/tests";
 import { usePiq } from "@/lib/use-piq";
 import { attemptDate, streakDays, useHistory, type Attempt, type HistoryTest } from "@/lib/use-history";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import LinearProgress from "@mui/material/LinearProgress";
+import { LinkButton } from "@/components/ui/link-button";
 
 const TESTS = ALL_TESTS.filter((t) => ["oir", "ppdt", "tat", "wat", "srt"].includes(t.slug));
 
@@ -59,15 +63,13 @@ export function DashboardView({ radar }: { radar: React.ReactNode }) {
       <header>
         <div className="flex items-center justify-between gap-3">
           <p className="min-w-0 truncate text-muted-foreground">{exam ? `${exam} preparation` : "Welcome back"}</p>
-          <div
-            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border py-1.5 pl-2.5 pr-3.5 text-sm font-semibold ${streak > 0 ? "border-brass/50 bg-brass/15 text-brass" : "border-white/10 bg-white/5 text-muted-foreground"}`}
-            title="Consecutive days with at least one test"
-            aria-label={`${streak} day streak`}
-          >
-            <Flame className={`size-4 ${streak > 0 ? "fill-brass/40" : ""}`} aria-hidden />
-            <span className="tabular-nums">{loading ? "…" : streak}</span>
-            <span className="font-medium opacity-80">day streak</span>
-          </div>
+          <Chip
+            icon={<Flame className={`size-4 ${streak > 0 ? "fill-current" : ""}`} aria-hidden />}
+            label={<><b className="tabular-nums">{loading ? "…" : streak}</b> day streak</>}
+            color={streak > 0 ? "secondary" : "default"} variant={streak > 0 ? "filled" : "outlined"}
+            title="Consecutive days with at least one test" aria-label={`${streak} day streak`}
+            sx={{ flexShrink: 0, height: 34, px: 0.5, "& .MuiChip-label": { fontWeight: 600 } }}
+          />
         </div>
         <h1 className="mt-3 font-display text-5xl font-black uppercase leading-[1.02] sm:text-6xl lg:text-7xl">Jai Hind{user?.firstName ? `, ${user.firstName}` : ""}</h1>
       </header>
@@ -81,7 +83,7 @@ export function DashboardView({ radar }: { radar: React.ReactNode }) {
               <span className="text-sm text-muted-foreground">{piq.completeness.done} of {piq.completeness.total} required fields done. Needed for the mock interview and before payment.</span>
             </span>
           </span>
-          <span className="rounded-full bg-brass px-5 py-2 text-sm font-bold text-black">{piq.completeness.done === 0 ? "Fill it" : "Continue"}</span>
+          <Chip color="secondary" label={piq.completeness.done === 0 ? "Fill it" : "Continue"} sx={{ px: 1, fontWeight: 800 }} />
         </Link>
       )}
 
@@ -92,11 +94,9 @@ export function DashboardView({ radar }: { radar: React.ReactNode }) {
         <p className="mt-3 max-w-md text-lg">{todays.full}</p>
         <p className="mt-1 max-w-md text-muted-foreground">{first ? "Word Association is the quickest test: 15 words, about four minutes." : `${todays.format}. ${todays.minutes}.`}</p>
         <div className="mt-7 flex flex-wrap items-center gap-3">
-          <Link href={`/${todays.slug}`} className="inline-flex h-14 items-center gap-2 rounded-full bg-primary px-9 font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:-translate-y-0.5">
-            Start {todays.name} <ArrowRight className="size-4" aria-hidden />
-          </Link>
-          <Link href="/lecturette" className="inline-flex h-14 items-center rounded-full border border-white/20 px-7 font-semibold transition-colors hover:border-white/40">Lecturette</Link>
-          <Link href="/interview-guide" className="inline-flex h-14 items-center rounded-full border border-white/20 px-7 font-semibold transition-colors hover:border-white/40">Interview</Link>
+          <LinkButton href={`/${todays.slug}`} variant="contained" size="large" endIcon={<ArrowRight className="size-4" aria-hidden />} sx={{ minHeight: 56, px: 4.5, boxShadow: "0 10px 24px -8px var(--primary)" }}>Start {todays.name}</LinkButton>
+          <LinkButton href="/lecturette" variant="outlined" color="inherit" size="large" sx={{ minHeight: 56 }}>Lecturette</LinkButton>
+          <LinkButton href="/interview-guide" variant="outlined" color="inherit" size="large" sx={{ minHeight: 56 }}>Interview</LinkButton>
         </div>
       </section>
 
@@ -147,19 +147,14 @@ export function DashboardView({ radar }: { radar: React.ReactNode }) {
             <Link key={r.slug} href={`/${r.slug}`} className="group grid grid-cols-[3.75rem_1fr_auto] items-center gap-3 border-b border-white/10 py-4 transition-colors hover:bg-white/[0.03] sm:grid-cols-[4.5rem_1fr_auto] sm:gap-4">
               <span className="font-display text-2xl font-black uppercase transition-colors group-hover:text-primary sm:text-3xl">{r.name}</span>
               <span className="min-w-0">
-                <span className="block h-1.5 overflow-hidden rounded-full bg-white/10" role="img" aria-label={r.best === undefined ? "No attempts yet" : `Best score ${r.best} out of 10`}>
-                  <span className="block h-full rounded-full bg-primary transition-[width] duration-700" style={{ width: `${((r.best ?? 0) / 10) * 100}%` }} />
-                </span>
+                <LinearProgress variant="determinate" value={((r.best ?? 0) / 10) * 100} aria-label={r.best === undefined ? "No attempts yet" : `Best score ${r.best} out of 10`} />
                 <span className="mt-1.5 block truncate text-xs text-muted-foreground">
                   {r.count === 0 ? "Not attempted yet" : `${r.count} attempt${r.count > 1 ? "s" : ""} · best ${r.best}/10 · last ${r.last}/10`}
                 </span>
               </span>
-              <span
-                className={`inline-flex h-10 min-w-24 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-bold transition-all group-hover:-translate-y-0.5 ${r.count === 0 ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" : "border border-white/20 text-foreground group-hover:border-primary group-hover:text-primary"}`}
-                aria-hidden
-              >
-                {r.count === 0 ? "Start" : "Retry"} <ArrowRight className="size-3.5" />
-              </span>
+              <Button component="span" tabIndex={-1} aria-hidden variant={r.count === 0 ? "contained" : "outlined"} color={r.count === 0 ? "primary" : "inherit"} size="small" endIcon={<ArrowRight className="size-3.5" />} sx={{ minWidth: 96 }}>
+                {r.count === 0 ? "Start" : "Retry"}
+              </Button>
             </Link>
           ))}
         </div>

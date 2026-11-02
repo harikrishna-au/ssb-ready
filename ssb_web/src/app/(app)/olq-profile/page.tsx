@@ -9,6 +9,7 @@ import { buildProfile, FIX } from "@/lib/olq-profile";
 import { shareCard } from "@/lib/olq-share";
 import { useHistory } from "@/lib/use-history";
 import { PageLoader } from "@/components/loader";
+import LinearProgress from "@mui/material/LinearProgress";
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -69,7 +70,7 @@ export default function OlqProfilePage() {
           {profile.factors.map((f) => (
             <div key={f.factor}>
               <div className="flex justify-between text-sm"><span className="font-semibold">{f.factor}</span><span className="tabular-nums text-muted-foreground">{pct(f.rate)}</span></div>
-              <div className="mt-1.5 h-2 rounded-full bg-white/10"><div className="h-2 rounded-full bg-primary" style={{ width: pct(f.rate) }} /></div>
+              <LinearProgress variant="determinate" value={parseFloat(pct(f.rate))} sx={{ mt: 0.75, height: 8 }} />
             </div>
           ))}
           <p className="text-xs text-muted-foreground">Share of your answers that showed each quality, with recent attempts counting more.</p>

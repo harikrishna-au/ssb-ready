@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { useMode } from "@/lib/modes";
 import { useCountdown } from "@/lib/use-countdown";
 import { useLeaveGuard } from "@/lib/use-leave-guard";
+import { LinkButton } from "@/components/ui/link-button";
 
 const PERSPECTIVES = [
   { key: "parents", icon: "👨‍👩‍👦", title: "Your parents or guardians", prompt: "How do they describe you? Your qualities, habits, strengths and what they feel you can improve." },
@@ -99,7 +100,7 @@ function AnalysisResult({ analysis, onRetry }: { analysis: string; onRetry: () =
       </section>
       <div className="flex flex-wrap gap-3">
         <PrimaryButton onClick={onRetry}>Try again</PrimaryButton>
-        <Link href="/tests" className="inline-flex h-12 items-center rounded-full border border-white/20 px-7 font-semibold hover:border-white/40">Another test</Link>
+        <LinkButton href="/tests" variant="outlined" color="inherit" size="large">Another test</LinkButton>
       </div>
       <p className="text-xs text-muted-foreground">AI analysis helps you practise. It is not an official assessment.</p>
     </div>

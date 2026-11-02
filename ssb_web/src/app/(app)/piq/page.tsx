@@ -9,6 +9,8 @@ import { ErrorView, PrimaryButton } from "@/components/exam/ui";
 import { completeness, safeNext, SECTIONS, validateField, type Field, type PiqValues } from "@/lib/piq";
 import { usePiq } from "@/lib/use-piq";
 import { PageLoader } from "@/components/loader";
+import { LinkButton } from "@/components/ui/link-button";
+import Button from "@mui/material/Button";
 
 const inputCls = "mt-1.5 w-full rounded-xl border bg-card/60 px-4 outline-none transition-colors focus:border-primary";
 
@@ -102,7 +104,7 @@ function Form({ initial }: { initial: PiqValues }) {
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           {finished && next && <PrimaryButton onClick={() => router.push(next)}>{next === "/premium" ? "Continue to payment" : "Continue"}</PrimaryButton>}
-          {finished && <Link href="/interview" className="inline-flex h-12 items-center rounded-full border border-white/20 px-7 font-semibold hover:border-white/40">Start mock interview</Link>}
+          {finished && <LinkButton href="/interview" variant="outlined" color="inherit" size="large">Start mock interview</LinkButton>}
           {!finished && <PrimaryButton onClick={() => { setFinished(null); goTo(SECTIONS.findIndex((s) => s.fields.some((f) => status.missing.includes(f)))); }}>Fill the missing fields</PrimaryButton>}
           <Link href="/dashboard" className="inline-flex h-12 items-center px-5 font-semibold text-muted-foreground hover:text-foreground">Home</Link>
         </div>
@@ -154,7 +156,7 @@ function Form({ initial }: { initial: PiqValues }) {
       {saveError && <p role="alert" className="mt-4 text-sm text-destructive">{saveError}</p>}
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        {step > 0 && <button onClick={() => goTo(step - 1)} className="inline-flex h-12 items-center rounded-full border border-white/20 px-6 font-semibold transition-colors hover:border-white/40">Back</button>}
+        {step > 0 && <Button onClick={() => goTo(step - 1)} variant="outlined" color="inherit" size="large">Back</Button>}
         <PrimaryButton onClick={onContinue} disabled={saving} className="px-9">{saving ? "Saving…" : step < SECTIONS.length - 1 ? "Save and continue" : "Save PIQ"}</PrimaryButton>
         <button onClick={onDraft} disabled={saving} className="px-3 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground disabled:opacity-60">Save draft</button>
       </div>

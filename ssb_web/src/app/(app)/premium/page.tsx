@@ -7,6 +7,7 @@ import { OwnedCard } from "@/components/billing/receipt";
 import { LEGAL } from "@/lib/legal";
 import { usePiq } from "@/lib/use-piq";
 import { usePremium } from "@/lib/use-premium";
+import { LinkButton } from "@/components/ui/link-button";
 
 /** Two steps: the PIQ must be complete before the payment step unlocks. */
 export default function Premium() {
@@ -49,9 +50,7 @@ export default function Premium() {
                     <div className="h-full bg-primary transition-[width]" style={{ width: `${c.percent}%` }} />
                   </div>
                   <p className="mt-1.5 text-xs text-muted-foreground">{c.done} of {c.total} required fields done</p>
-                  <Link href="/piq?next=/premium" className="mt-5 inline-flex h-12 items-center rounded-full bg-primary px-8 font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
-                    {c.done === 0 ? "Fill my PIQ" : "Continue my PIQ"}
-                  </Link>
+                  <LinkButton href="/piq?next=/premium" variant="contained" size="large" sx={{ mt: 2.5 }}>{c.done === 0 ? "Fill my PIQ" : "Continue my PIQ"}</LinkButton>
                 </>
               )}
             </div>

@@ -7,6 +7,7 @@ import { ErrorView } from "@/components/exam/ui";
 import { api } from "@/lib/api";
 import { usePiq } from "@/lib/use-piq";
 import { PageLoader } from "@/components/loader";
+import { LinkButton } from "@/components/ui/link-button";
 
 type Msg = { role: "assistant" | "user"; content: string };
 
@@ -91,9 +92,7 @@ export default function InterviewPage() {
         <Link href="/interview-guide" className="text-sm text-muted-foreground transition-colors hover:text-foreground">← Interview guide</Link>
         <h1 className="mt-4 font-display text-6xl font-black uppercase leading-none">Fill your PIQ first</h1>
         <p className="mt-3 text-muted-foreground">The interviewing officer questions you from your PIQ, so the mock interview starts once it is complete. You have {c.done} of {c.total} required fields done.</p>
-        <Link href="/piq?next=/interview" className="mt-8 inline-flex h-14 items-center rounded-full bg-primary px-10 font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
-          {c.done === 0 ? "Fill my PIQ" : "Continue my PIQ"}
-        </Link>
+        <LinkButton href="/piq?next=/interview" variant="contained" size="large" sx={{ mt: 4, minHeight: 56, px: 5 }}>{c.done === 0 ? "Fill my PIQ" : "Continue my PIQ"}</LinkButton>
       </div>
     );
 

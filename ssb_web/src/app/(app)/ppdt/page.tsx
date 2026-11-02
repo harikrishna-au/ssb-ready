@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { fetchPictures, type Alignment, type Picture } from "@/lib/images";
 import { useCountdown, useLatest } from "@/lib/use-countdown";
 import { useLeaveGuard } from "@/lib/use-leave-guard";
+import TextField from "@mui/material/TextField";
 
 type Phase = "intro" | "observe" | "perception" | "write" | "evaluating" | "done" | "error";
 type Result = { analysisMarkdown: string; score: number; leaderboard: LeaderboardRow[]; alignment: Alignment | null };
@@ -122,13 +123,13 @@ export default function PpdtPage() {
             <p className="mt-2 text-muted-foreground">Quick notes. These help your story and are sent with it for feedback.</p>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               {FIELDS.map(([k, label, hint], i) => (
-                <label key={k} className={i === 0 ? "sm:col-span-2" : ""}>
-                  <span className="text-sm font-semibold">{label}</span>
-                  <input
-                    autoFocus={i === 0} value={notes[k]} onChange={(e) => setNotes({ ...notes, [k]: e.target.value })} placeholder={hint}
-                    className="mt-1.5 h-12 w-full rounded-xl border border-white/10 bg-card/60 px-4 outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary"
+                <div key={k} className={i === 0 ? "sm:col-span-2" : ""}>
+                  <TextField
+                    fullWidth autoFocus={i === 0} label={label} placeholder={hint} value={notes[k]}
+                    onChange={(e) => setNotes({ ...notes, [k]: e.target.value })}
+                    slotProps={{ inputLabel: { shrink: true } }}
                   />
-                </label>
+                </div>
               ))}
             </div>
             <div className="mt-6 flex justify-end"><PrimaryButton onClick={() => setPhase("write")}>Start writing</PrimaryButton></div>
