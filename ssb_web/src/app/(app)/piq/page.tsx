@@ -8,6 +8,7 @@ import { Suspense, useRef, useState } from "react";
 import { ErrorView, PrimaryButton } from "@/components/exam/ui";
 import { completeness, safeNext, SECTIONS, validateField, type Field, type PiqValues } from "@/lib/piq";
 import { usePiq } from "@/lib/use-piq";
+import { PageLoader } from "@/components/loader";
 
 const inputCls = "mt-1.5 w-full rounded-xl border bg-card/60 px-4 outline-none transition-colors focus:border-primary";
 
@@ -164,10 +165,10 @@ function Form({ initial }: { initial: PiqValues }) {
 function PiqPage() {
   const { values, loading, failed, reload } = usePiq();
   if (failed) return <ErrorView message="Could not load your PIQ. Check your connection and try again." onRetry={() => void reload()} />;
-  if (loading) return <div className="h-96 animate-pulse rounded-3xl bg-white/5" role="status" aria-label="Loading your PIQ" />;
+  if (loading) return <PageLoader label="Loading your PIQ…" />;
   return <Form initial={values} />;
 }
 
 export default function Page() {
-  return <Suspense fallback={<div className="h-96 animate-pulse rounded-3xl bg-white/5" />}><PiqPage /></Suspense>;
+  return <Suspense fallback={<PageLoader />}><PiqPage /></Suspense>;
 }

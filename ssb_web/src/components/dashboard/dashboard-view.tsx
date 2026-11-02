@@ -56,22 +56,20 @@ export function DashboardView({ radar }: { radar: React.ReactNode }) {
   return (
     <div className="rise space-y-8">
       {/* Greeting */}
-      <header className="flex items-start justify-between gap-3 sm:gap-6">
-        <div className="min-w-0">
-          <p className="text-muted-foreground">{exam ? `${exam} preparation` : "Welcome back"}</p>
-          <h1 className="font-display text-5xl font-black uppercase leading-[0.9] sm:text-7xl">Jai Hind{user?.firstName ? `, ${user.firstName}` : ""}</h1>
-        </div>
-        <div
-          className={`flex shrink-0 items-center gap-2 rounded-full border py-2 pl-3 pr-4 sm:gap-3 sm:py-2.5 sm:pl-4 sm:pr-5 ${streak > 0 ? "border-brass/50 bg-gradient-to-br from-brass/25 to-brass/5 shadow-lg shadow-brass/10" : "border-white/10 bg-white/5"}`}
-          title="Consecutive days with at least one test"
-          aria-label={`${streak} day streak`}
-        >
-          <Flame className={`size-6 sm:size-7 ${streak > 0 ? "fill-brass/30 text-brass" : "text-muted-foreground"}`} aria-hidden />
-          <div className="leading-none">
-            <p className="font-display text-3xl font-black tabular-nums sm:text-4xl">{loading ? "…" : streak}</p>
-            <p className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground sm:text-xs">day streak</p>
+      <header>
+        <div className="flex items-center justify-between gap-3">
+          <p className="min-w-0 truncate text-muted-foreground">{exam ? `${exam} preparation` : "Welcome back"}</p>
+          <div
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border py-1.5 pl-2.5 pr-3.5 text-sm font-semibold ${streak > 0 ? "border-brass/50 bg-brass/15 text-brass" : "border-white/10 bg-white/5 text-muted-foreground"}`}
+            title="Consecutive days with at least one test"
+            aria-label={`${streak} day streak`}
+          >
+            <Flame className={`size-4 ${streak > 0 ? "fill-brass/40" : ""}`} aria-hidden />
+            <span className="tabular-nums">{loading ? "…" : streak}</span>
+            <span className="font-medium opacity-80">day streak</span>
           </div>
         </div>
+        <h1 className="mt-3 font-display text-5xl font-black uppercase leading-[1.02] sm:text-6xl lg:text-7xl">Jai Hind{user?.firstName ? `, ${user.firstName}` : ""}</h1>
       </header>
 
       {piq.ready && !piq.completeness.complete && (
@@ -146,17 +144,22 @@ export function DashboardView({ radar }: { radar: React.ReactNode }) {
         <h2 id="by-test" className="text-3xl font-extrabold uppercase">By test</h2>
         <div className="mt-3">
           {rows.map((r) => (
-            <Link key={r.slug} href={`/${r.slug}`} className="group grid grid-cols-[4.5rem_1fr_auto] items-center gap-4 border-b border-white/10 py-4 transition-colors hover:bg-white/[0.03]">
-              <span className="font-display text-3xl font-black uppercase transition-colors group-hover:text-primary">{r.name}</span>
-              <span>
+            <Link key={r.slug} href={`/${r.slug}`} className="group grid grid-cols-[3.75rem_1fr_auto] items-center gap-3 border-b border-white/10 py-4 transition-colors hover:bg-white/[0.03] sm:grid-cols-[4.5rem_1fr_auto] sm:gap-4">
+              <span className="font-display text-2xl font-black uppercase transition-colors group-hover:text-primary sm:text-3xl">{r.name}</span>
+              <span className="min-w-0">
                 <span className="block h-1.5 overflow-hidden rounded-full bg-white/10" role="img" aria-label={r.best === undefined ? "No attempts yet" : `Best score ${r.best} out of 10`}>
                   <span className="block h-full rounded-full bg-primary transition-[width] duration-700" style={{ width: `${((r.best ?? 0) / 10) * 100}%` }} />
                 </span>
-                <span className="mt-1.5 block text-xs text-muted-foreground">
-                  {r.count === 0 ? "Not attempted yet" : `${r.count} attempt${r.count > 1 ? "s" : ""} · best ${r.best}/10`}
+                <span className="mt-1.5 block truncate text-xs text-muted-foreground">
+                  {r.count === 0 ? "Not attempted yet" : `${r.count} attempt${r.count > 1 ? "s" : ""} · best ${r.best}/10 · last ${r.last}/10`}
                 </span>
               </span>
-              <span className="text-sm font-semibold text-primary">{r.count === 0 ? "Start" : `Last ${r.last}/10`}</span>
+              <span
+                className={`inline-flex h-10 min-w-24 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-bold transition-all group-hover:-translate-y-0.5 ${r.count === 0 ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" : "border border-white/20 text-foreground group-hover:border-primary group-hover:text-primary"}`}
+                aria-hidden
+              >
+                {r.count === 0 ? "Start" : "Retry"} <ArrowRight className="size-3.5" />
+              </span>
             </Link>
           ))}
         </div>

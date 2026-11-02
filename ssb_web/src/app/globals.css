@@ -169,6 +169,11 @@ a, button, summary { -webkit-tap-highlight-color: transparent; }
 /* Exam hall */
 @keyframes dial { from { stroke-dashoffset: var(--full); } to { stroke-dashoffset: var(--to); } }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes loader-spin { to { transform: rotate(360deg); } }
+@keyframes loader-breathe { 0%, 100% { transform: scale(0.92); } 50% { transform: scale(1); } }
+.loader-ring { animation: loader-spin 1.1s linear infinite; }
+.loader-logo { width: 56%; height: 56%; animation: loader-breathe 1.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .loader-ring, .loader-logo { animation: none; } }
 @keyframes pulse-ring { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 .dial-arc { animation: dial 1.1s cubic-bezier(.2,.7,.2,1) forwards; }
 .rise { animation: rise .35s ease-out both; }

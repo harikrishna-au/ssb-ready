@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { payments } from "@/lib/api";
+import { Loader } from "@/components/loader";
 
 export type PaymentItem = {
   orderId: string; paymentId: string | null; status: "paid" | "failed" | "refunded"; amountInr: number; currency: string;
@@ -63,7 +64,7 @@ export function OwnedCard({ since }: { since: string | null }) {
         {since && ` Active since ${when(since)}.`}
       </p>
       <div className="mt-5 border-t border-white/10 pt-5">
-        {loading && <p className="text-sm text-muted-foreground">Loading your receipt…</p>}
+        {loading && <div className="py-4"><Loader size={36} label="Loading your receipt…" /></div>}
         {paid && <ReceiptDetails item={paid} />}
         {!loading && !paid && (
           <p className="text-sm text-muted-foreground">Your access was added without an online payment on this site (for example a purchase in the mobile app), so there is no web receipt to show here.</p>

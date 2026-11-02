@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { inr, ReceiptDetails, usePayments, when } from "@/components/billing/receipt";
 import { LEGAL } from "@/lib/legal";
+import { PageLoader } from "@/components/loader";
 
 const LABEL = { paid: "Paid", failed: "Failed", refunded: "Refunded" } as const;
 const TONE = { paid: "bg-green-500/15 text-green-400", failed: "bg-destructive/15 text-destructive", refunded: "bg-white/10 text-muted-foreground" } as const;
@@ -14,7 +15,7 @@ export default function Billing() {
       <h1 className="font-display text-6xl font-black uppercase leading-none">Billing</h1>
       <p className="mt-3 text-muted-foreground">Your payments and receipts. Refund terms are in the <Link href="/refunds" className="text-primary underline">refund policy</Link>.</p>
 
-      {loading && <p className="mt-8 text-muted-foreground" role="status">Loading…</p>}
+      {loading && <PageLoader label="Loading your payments…" className="min-h-48" />}
       {error && <p role="alert" className="mt-8 text-destructive">Could not load your payments. Refresh to try again.</p>}
 
       {data && data.items.length === 0 && (

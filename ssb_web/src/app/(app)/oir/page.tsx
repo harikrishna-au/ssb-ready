@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { checkOirAnswer, fetchContent, type OirItem } from "@/lib/content";
 import { fmt, useCountdown, useLatest } from "@/lib/use-countdown";
 import { useLeaveGuard } from "@/lib/use-leave-guard";
+import { PageLoader } from "@/components/loader";
 
 /** No answer here: the server reveals it only after the user commits to an option. */
 type Question = { id: string; text: string; options: string[]; image_url?: string | null };
@@ -91,7 +92,7 @@ export default function OirPage() {
     return () => window.removeEventListener("keydown", h);
   }, [onKey]);
 
-  if (phase === "loading") return <div className="h-72 animate-pulse rounded-3xl bg-white/5" role="status" aria-label="Loading questions" />;
+  if (phase === "loading") return <PageLoader label="Loading questions…" />;
   if (phase === "error") return <ErrorView message={error} onRetry={retry} />;
   if (phase === "analyzing") return <EvaluatingView label="Totalling your score" />;
 

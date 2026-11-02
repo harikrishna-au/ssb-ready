@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ErrorView } from "@/components/exam/ui";
 import { api } from "@/lib/api";
 import { usePiq } from "@/lib/use-piq";
+import { PageLoader } from "@/components/loader";
 
 type Msg = { role: "assistant" | "user"; content: string };
 
@@ -82,7 +83,7 @@ export default function InterviewPage() {
   };
 
   if (failed) return <ErrorView message="Could not load your PIQ. Check your connection and try again." onRetry={() => void reload()} />;
-  if (loading) return <div className="h-72 animate-pulse rounded-3xl bg-white/5" role="status" aria-label="Loading your PIQ" />;
+  if (loading) return <PageLoader label="Loading your PIQ…" />;
 
   if (!c.complete)
     return (

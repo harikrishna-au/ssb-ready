@@ -8,6 +8,7 @@ import { RadarChart } from "@/components/olq/radar-chart";
 import { buildProfile, FIX } from "@/lib/olq-profile";
 import { shareCard } from "@/lib/olq-share";
 import { useHistory } from "@/lib/use-history";
+import { PageLoader } from "@/components/loader";
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -28,7 +29,7 @@ export default function OlqProfilePage() {
   };
 
   if (failed) return <p role="alert" className="rounded-lg border border-destructive/40 p-4 text-sm">Could not load your attempts. Refresh and try again.</p>;
-  if (loading) return <div className="h-96 animate-pulse rounded-2xl bg-white/5" role="status" aria-label="Loading your profile" />;
+  if (loading) return <PageLoader label="Loading your profile…" />;
 
   if (!profile)
     return (

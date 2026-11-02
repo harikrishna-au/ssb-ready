@@ -6,6 +6,7 @@ import { fmtDate, type AnnotatedItem } from "@/data/radar";
 import { STATUSES, useTracker, type StatusId } from "@/lib/use-tracker";
 import { Deadline } from "./deadline";
 import { ReminderSettings } from "./reminder-settings";
+import { PageLoader } from "@/components/loader";
 
 export function ApplicationsBoard({ items }: { items: AnnotatedItem[] }) {
   const { ready, apps, setStatus, setNote, untrack, loadFailed, retry, signedIn } = useTracker();
@@ -23,7 +24,7 @@ export function ApplicationsBoard({ items }: { items: AnnotatedItem[] }) {
     try { await p; } catch { setError("Could not save that change. Check your connection and try again."); }
   };
 
-  if (!ready) return <p className="text-muted-foreground">Loading your applications…</p>;
+  if (!ready) return <PageLoader label="Loading your applications…" />;
   if (loadFailed)
     return (
       <div role="alert" className="rounded-2xl border border-destructive/40 bg-destructive/10 p-6">

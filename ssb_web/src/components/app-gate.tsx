@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader } from "@/components/loader";
 import { useUser } from "@clerk/nextjs";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -26,13 +27,7 @@ export function AppGate({ children }: { children: React.ReactNode }) {
   // and Next can validate the route. The skeleton shows in its place.
   return (
     <>
-      {waiting && (
-        <div className="space-y-6" role="status" aria-label="Loading">
-          <div className="h-12 w-2/3 animate-pulse rounded-lg bg-white/5" />
-          <div className="h-40 animate-pulse rounded-2xl bg-white/5" />
-          <div className="h-24 animate-pulse rounded-2xl bg-white/5" />
-        </div>
-      )}
+      {waiting && <PageLoader label="Getting things ready…" />}
       <div hidden={waiting}>{children}</div>
     </>
   );
