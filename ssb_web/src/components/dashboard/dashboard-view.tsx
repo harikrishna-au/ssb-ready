@@ -56,19 +56,20 @@ export function DashboardView({ radar }: { radar: React.ReactNode }) {
   return (
     <div className="rise space-y-8">
       {/* Greeting */}
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
+      <header className="flex items-start justify-between gap-3 sm:gap-6">
+        <div className="min-w-0">
           <p className="text-muted-foreground">{exam ? `${exam} preparation` : "Welcome back"}</p>
-          <h1 className="font-display text-6xl font-black uppercase leading-[0.9] sm:text-7xl">Jai Hind{user?.firstName ? `, ${user.firstName}` : ""}</h1>
+          <h1 className="font-display text-5xl font-black uppercase leading-[0.9] sm:text-7xl">Jai Hind{user?.firstName ? `, ${user.firstName}` : ""}</h1>
         </div>
         <div
-          className={`flex items-center gap-3 rounded-2xl border px-5 py-3 ${streak > 0 ? "border-brass/40 bg-brass/10" : "border-white/10"}`}
+          className={`flex shrink-0 items-center gap-2 rounded-full border py-2 pl-3 pr-4 sm:gap-3 sm:py-2.5 sm:pl-4 sm:pr-5 ${streak > 0 ? "border-brass/50 bg-gradient-to-br from-brass/25 to-brass/5 shadow-lg shadow-brass/10" : "border-white/10 bg-white/5"}`}
           title="Consecutive days with at least one test"
+          aria-label={`${streak} day streak`}
         >
-          <Flame className={`size-7 ${streak > 0 ? "text-brass" : "text-muted-foreground"}`} aria-hidden />
+          <Flame className={`size-6 sm:size-7 ${streak > 0 ? "fill-brass/30 text-brass" : "text-muted-foreground"}`} aria-hidden />
           <div className="leading-none">
-            <p className="font-display text-4xl font-black tabular-nums">{loading ? "…" : streak}</p>
-            <p className="mt-1 text-xs text-muted-foreground">day streak</p>
+            <p className="font-display text-3xl font-black tabular-nums sm:text-4xl">{loading ? "…" : streak}</p>
+            <p className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground sm:text-xs">day streak</p>
           </div>
         </div>
       </header>
