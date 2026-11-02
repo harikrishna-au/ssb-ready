@@ -30,7 +30,7 @@ export default async function TagPage({ params }: PageProps<"/blog/tag/[slug]">)
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-14">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 sm:px-6 lg:px-8 py-10 md:py-14">
         <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Blog", href: "/blog" }, { label: tagName(slug) }]} className="mb-6" />
         <h1 className="text-5xl font-black uppercase leading-none sm:text-6xl">{tagName(slug)}</h1>
         <p className="mt-4 text-muted-foreground">{tag.count} {tag.count === 1 ? "guide" : "guides"} on this topic</p>

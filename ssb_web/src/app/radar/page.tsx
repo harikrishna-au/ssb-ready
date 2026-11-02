@@ -36,7 +36,7 @@ function Public() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-14">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 sm:px-6 lg:px-8 py-10 md:py-14">
         <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Radar" }]} className="mb-6" />
         <Body large />
       </main>

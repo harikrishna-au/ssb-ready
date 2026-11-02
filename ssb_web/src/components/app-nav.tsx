@@ -97,7 +97,8 @@ export function TopBar() {
   const premium = usePremium();
   const back = backTarget(path);
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-white/[0.06] bg-background/80 px-4 backdrop-blur-md md:px-8">
+    <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-background/80 backdrop-blur-md">
+      <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-3 px-4 sm:px-6 lg:px-8">
       {back?.href && (
         <Link
           href={back.href} aria-label={`Back to ${back.label}`}
@@ -113,6 +114,7 @@ export function TopBar() {
         </Link>
       )}
       <div className="md:hidden"><UserButton /></div>
+      </div>
     </header>
   );
 }

@@ -26,7 +26,7 @@ export function Logo({ className = "" }: { className?: string }) {
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <Logo />
         <nav className="hidden items-center gap-1 rounded-full border border-white/[0.08] bg-card/50 p-1 text-sm md:flex" aria-label="Main">
           {[["/radar", "Radar"], ["/#tests", "Tests"], ["/#pricing", "Pricing"], ["/blog", "Blog"], ["/#faq", "FAQ"]].map(([href, label]) => (
@@ -54,7 +54,7 @@ export function SiteHeader() {
 export function SiteFooter() {
   return (
     <footer className="border-t border-white/5">
-      <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 md:grid-cols-[1.4fr_1fr_1fr]">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:px-8 py-12 md:grid-cols-[1.4fr_1fr_1fr]">
         <div className="space-y-3">
           <Logo />
           <p className="max-w-xs text-sm text-muted-foreground">

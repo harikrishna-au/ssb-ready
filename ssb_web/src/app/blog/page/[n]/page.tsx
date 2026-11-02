@@ -25,7 +25,7 @@ export default async function BlogPage({ params }: PageProps<"/blog/page/[n]">) 
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-14">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 sm:px-6 lg:px-8 py-10 md:py-14">
         <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Blog", href: "/blog" }, { label: `Page ${page}` }]} className="mb-6" />
         <h1 className="text-5xl font-black uppercase leading-none sm:text-6xl">SSB preparation guides, page {page}</h1>
         <CategoryNav />

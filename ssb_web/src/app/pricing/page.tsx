@@ -57,7 +57,7 @@ export default function Pricing() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-14">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 sm:px-6 lg:px-8 py-10 md:py-14">
         <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Pricing" }]} className="mb-6" />
         <h1 className="max-w-3xl text-5xl font-black uppercase leading-none sm:text-6xl lg:text-7xl">Start free. Pay once if you want more pictures.</h1>
         <p className="mt-5 max-w-2xl text-lg text-muted-foreground">Every test and every written-attempt score is free. Lifetime unlocks the full picture bank for PPDT and TAT.</p>

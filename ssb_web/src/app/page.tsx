@@ -28,7 +28,7 @@ export default function Landing() {
       <main className="flex-1">
         {/* Hero */}
         <section className="relative overflow-hidden">
-          <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-16 md:grid-cols-[1.15fr_1fr] md:py-24">
+          <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 lg:px-8 py-16 md:grid-cols-[1.15fr_1fr] md:py-24">
             <div>
               <h1 className="text-6xl font-black uppercase leading-[0.95] sm:text-7xl lg:text-8xl">
                 Practise the SSB on the clock, not on a hunch.
@@ -48,7 +48,7 @@ export default function Landing() {
 
         {/* Radar */}
         <section id="radar" className="border-t border-white/5 bg-card/40 py-20">
-          <div className="mx-auto max-w-6xl px-5">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <h2 className="max-w-3xl text-5xl font-black uppercase leading-none sm:text-6xl">Radar: never miss a last date</h2>
             <p className="mt-4 max-w-2xl text-muted-foreground">
               See which defence officer exams are open or opening next, jump to the official apply page and track every application you make in one list.
@@ -62,7 +62,7 @@ export default function Landing() {
 
         {/* Tests */}
         <section id="tests" className="border-t border-white/5 py-20">
-          <div className="mx-auto max-w-6xl px-5">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <h2 className="max-w-2xl text-5xl font-black uppercase leading-none sm:text-6xl">The rounds that decide whether you stay, in the board&apos;s own format</h2>
             <p className="mt-4 max-w-xl text-muted-foreground">Timings match what you will face on the day.</p>
             <div className="mt-12">
@@ -92,7 +92,7 @@ export default function Landing() {
 
         {/* How it works */}
         <section id="how" className="border-t border-white/5 bg-card/40 py-20">
-          <div className="mx-auto grid max-w-6xl gap-12 px-5 md:grid-cols-2">
+          <div className="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 lg:px-8 md:grid-cols-2">
             <div>
               <h2 className="text-5xl font-black uppercase leading-none sm:text-6xl">What happens after you hit submit</h2>
               <ol className="mt-10 space-y-8">
@@ -127,7 +127,7 @@ export default function Landing() {
 
         {/* OLQs */}
         <section className="border-t border-white/5 py-20">
-          <div className="mx-auto max-w-6xl px-5">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <h2 className="max-w-3xl text-4xl font-black uppercase leading-none sm:text-5xl">Scored against the qualities the board looks for</h2>
             <ul className="mt-8 flex flex-wrap gap-2.5">
               {OLQS.map((q) => (
@@ -139,7 +139,7 @@ export default function Landing() {
 
         {/* Pricing */}
         <section id="pricing" className="border-t border-white/5 bg-card/40 py-20">
-          <div className="mx-auto max-w-6xl px-5">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <h2 className="text-5xl font-black uppercase leading-none sm:text-6xl">Pay once. Prepare for as many attempts as it takes.</h2>
             <div className="mt-12 grid gap-6 md:max-w-4xl md:grid-cols-2">
               <div className="rounded-2xl border border-white/10 p-7">
@@ -168,7 +168,7 @@ export default function Landing() {
 
         {/* FAQ */}
         <section id="faq" className="border-t border-white/5 py-20">
-          <div className="mx-auto grid max-w-6xl gap-10 px-5 md:grid-cols-[1fr_1.4fr]">
+          <div className="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 lg:px-8 md:grid-cols-[1fr_1.4fr]">
             <h2 className="text-5xl font-black uppercase leading-none sm:text-6xl">Questions aspirants ask</h2>
             <div>
               {FAQ.map((f) => (
@@ -186,7 +186,7 @@ export default function Landing() {
 
         {/* Final CTA */}
         <section className="border-t border-white/5 py-20 text-center">
-          <h2 className="mx-auto max-w-3xl px-5 text-5xl font-black uppercase leading-none sm:text-6xl">Your first WAT takes four minutes.</h2>
+          <h2 className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-5xl font-black uppercase leading-none sm:text-6xl">Your first WAT takes four minutes.</h2>
           <Link href="/sign-up" className="mt-8 inline-flex min-h-12 items-center rounded-lg bg-primary px-7 py-3.5 font-semibold text-primary-foreground">Start free</Link>
         </section>
       </main>

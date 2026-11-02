@@ -97,7 +97,7 @@ async function PostView({ params }: PageProps<"/blog/[slug]">) {
     <>
       <SiteHeader />
       <ReadingProgress targetId="article-body" />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-12">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 sm:px-6 lg:px-8 py-10 md:py-14">
         <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Blog", href: "/blog" }, { label: post.category, href: `/blog/category/${catSlug}` }, { label: post.title }]} />
         <div className="mt-4 grid gap-12 lg:grid-cols-[minmax(0,1fr)_21rem]">
           <article className="min-w-0">
@@ -189,7 +189,7 @@ async function PostView({ params }: PageProps<"/blog/[slug]">) {
 
 export default function PostPage(props: PageProps<"/blog/[slug]">) {
   return (
-    <Suspense fallback={<div className="mx-auto min-h-screen w-full max-w-6xl px-5 py-12"><div className="h-14 w-2/3 animate-pulse rounded-lg bg-white/5 motion-reduce:animate-none" /></div>}>
+    <Suspense fallback={<div className="mx-auto min-h-screen w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-12"><div className="h-14 w-2/3 animate-pulse rounded-lg bg-white/5 motion-reduce:animate-none" /></div>}>
       <PostView {...props} />
     </Suspense>
   );

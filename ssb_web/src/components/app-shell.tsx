@@ -9,7 +9,7 @@ export function AppShell({ children, gate = true }: { children: React.ReactNode;
       <Suspense><Sidebar /></Suspense>
       <div className="flex min-w-0 flex-1 flex-col">
         <Suspense><TopBar /></Suspense>
-        <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 pb-28 md:px-8 md:py-10 md:pb-12">
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 pb-28 sm:px-6 md:py-10 md:pb-12 lg:px-8 lg:py-12">
           {gate ? <Suspense fallback={null}><AppGate>{children}</AppGate></Suspense> : children}
         </main>
       </div>

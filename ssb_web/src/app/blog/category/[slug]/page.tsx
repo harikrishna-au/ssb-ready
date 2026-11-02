@@ -28,7 +28,7 @@ export default async function CategoryPage({ params }: PageProps<"/blog/category
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-14">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 sm:px-6 lg:px-8 py-10 md:py-14">
         <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Blog", href: "/blog" }, { label: cat.name }]} className="mb-6" />
         <h1 className="text-5xl font-black uppercase leading-none sm:text-6xl">{cat.name}</h1>
         <p className="mt-4 text-muted-foreground">{cat.count} {cat.count === 1 ? "guide" : "guides"}</p>

@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useState } from "react";
-import { ErrorView, EvaluatingView, ExamStage, ImageMatch, PrimaryButton, ScoreResult, TestIntro, WritingPad } from "@/components/exam/ui";
+import { ErrorView, EvaluatingView, ExamStage, ImageMatch, PrimaryButton, ScoreResult, SubmitEarlyDialog, TestIntro, WritingPad } from "@/components/exam/ui";
 import { Leaderboard, type LeaderboardRow } from "@/components/leaderboard";
 import { api } from "@/lib/api";
 import { fetchPictures, type Alignment, type Picture } from "@/lib/images";
@@ -30,6 +30,7 @@ export default function PpdtPage() {
   const [story, setStory] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
   const storyRef = useLatest(story);
   const notesRef = useLatest(notes);
 
@@ -103,6 +104,10 @@ export default function PpdtPage() {
       <ExamStage
         title="Picture Perception & Discussion Test" wide={phase === "observe"}
         timer={{ left, total: secs }} stepper={{ steps: STEPS, current: stepIndex }}
+        overlay={<SubmitEarlyDialog
+          open={confirmSubmit && phase === "write"} left={left}
+          onCancel={() => setConfirmSubmit(false)} onConfirm={() => { setConfirmSubmit(false); void submit(); }}
+        />}
       >
         {phase === "observe" && (
           <div className="text-center">
@@ -135,7 +140,7 @@ export default function PpdtPage() {
             <h2 className="font-display text-5xl font-black uppercase leading-none">Write your story</h2>
             <p className="mt-2 text-muted-foreground">Past, present problem, future outcome. Let your hero act.</p>
             <div className="mt-6"><WritingPad autoFocus rows={11} label="Your story" value={story} onChange={setStory} placeholder="Start writing…" /></div>
-            <div className="mt-5 flex justify-end"><PrimaryButton onClick={submit}>Submit story</PrimaryButton></div>
+            <div className="mt-5 flex justify-end"><PrimaryButton onClick={() => (story.trim() && left > 0 ? setConfirmSubmit(true) : void submit())}>Submit story</PrimaryButton></div>
           </div>
         )}
       </ExamStage>

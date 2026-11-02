@@ -6,7 +6,7 @@ export function LegalPage({ title, children }: { title: string; children: React.
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-14">
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 sm:px-6 lg:px-8 py-10 md:py-14">
         <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: title }]} className="mb-6" />
         <h1 className="text-5xl font-black uppercase leading-none">{title}</h1>
         <p className="mt-3 text-sm text-muted-foreground">Effective {LEGAL.effectiveDate}</p>

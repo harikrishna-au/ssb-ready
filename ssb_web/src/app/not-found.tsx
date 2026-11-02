@@ -15,7 +15,7 @@ export default function NotFound() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-20">
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 sm:px-6 lg:px-8 py-14 md:py-20">
         <p className="font-display text-7xl font-black text-brass">404</p>
         <h1 className="mt-2 text-4xl font-black uppercase leading-none sm:text-5xl">We could not find that page</h1>
         <p className="mt-4 text-muted-foreground">The link may be old or mistyped. These pages may help.</p>

@@ -144,6 +144,8 @@ export function ExamStage(props: {
   stepper?: { steps: string[]; current: number };
   children: React.ReactNode;
   wide?: boolean;
+  /** Rendered above the stage (z-70), for dialogs. Kept outside the animated content so `fixed` works. */
+  overlay?: React.ReactNode;
 }) {
   const router = useRouter();
   const [confirm, setConfirm] = useState(false);
@@ -163,7 +165,7 @@ export function ExamStage(props: {
   return (
     <div className="stage-glow fixed inset-0 z-[60] flex flex-col overflow-y-auto bg-background">
       <header className="sticky top-0 z-10 border-b border-white/[0.06] bg-background/85 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-5xl items-center gap-4 px-4">
+        <div className="mx-auto flex h-16 max-w-5xl items-center gap-4 px-4 sm:px-6">
           <button onClick={() => setConfirm(true)} aria-label="Exit test" className="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-muted-foreground transition-colors hover:border-white/30 hover:text-foreground">
             <X className="size-4" aria-hidden />
           </button>
@@ -181,10 +183,11 @@ export function ExamStage(props: {
         {props.stepper && <Stepper {...props.stepper} />}
       </header>
 
-      <main className={`mx-auto flex w-full flex-1 flex-col justify-center px-4 pt-6 pb-[max(2rem,env(safe-area-inset-bottom))] sm:py-8 ${props.wide ? "max-w-5xl" : "max-w-3xl"}`}>
-        <div key={String(p?.current ?? 0)} className="rise">{props.children}</div>
+      <main className={`mx-auto flex w-full flex-1 flex-col px-4 sm:px-6 pt-6 pb-[max(2rem,env(safe-area-inset-bottom))] sm:py-8 ${props.wide ? "max-w-5xl" : "max-w-3xl"}`}>
+        <div key={String(p?.current ?? 0)} className="rise my-auto">{props.children}</div>
       </main>
 
+      {props.overlay}
       {confirm && (
         <div className="fixed inset-0 z-[70] grid place-items-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="leave-title">
           <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-card p-6">
@@ -203,7 +206,7 @@ export function ExamStage(props: {
 
 export function Stepper({ steps, current }: { steps: string[]; current: number }) {
   return (
-    <ol className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2.5 text-xs" aria-label="Test stages">
+    <ol className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2.5 sm:px-6 text-xs" aria-label="Test stages">
       {steps.map((s, i) => (
         <li key={s} aria-current={i === current ? "step" : undefined} className="flex items-center gap-2">
           <span className={`grid size-5 place-items-center rounded-full text-[10px] font-bold ${i < current ? "bg-primary text-primary-foreground" : i === current ? "border border-primary text-primary" : "border border-white/15 text-muted-foreground"}`}>
@@ -418,6 +421,31 @@ export function ModeSwitch(props: {
         ))}
       </div>
       {props.note && <p className="mt-3 text-sm text-muted-foreground">{props.note}</p>}
+    </div>
+  );
+}
+
+/** "Submit before the time is up?" prompt. Shows the time left so the choice is informed. */
+export function SubmitEarlyDialog(props: { open: boolean; left: number; onConfirm: () => void; onCancel: () => void }) {
+  useEffect(() => {
+    if (!props.open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && props.onCancel();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [props]);
+  if (!props.open) return null;
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="submit-early-title">
+      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-card p-6">
+        <h2 id="submit-early-title" className="text-2xl font-extrabold uppercase">Submit now?</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          You still have <span className="font-semibold tabular-nums text-foreground">{fmt(props.left)}</span> left. Once you submit, you can&apos;t edit your answer.
+        </p>
+        <div className="mt-6 flex gap-3">
+          <button autoFocus onClick={props.onCancel} className="h-11 flex-1 rounded-full border border-white/20 font-semibold hover:border-white/40">Keep writing</button>
+          <button onClick={props.onConfirm} className="h-11 flex-1 rounded-full bg-primary font-semibold text-primary-foreground">Submit</button>
+        </div>
+      </div>
     </div>
   );
 }

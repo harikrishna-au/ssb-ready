@@ -24,7 +24,7 @@ export function ExamPage({ exam }: { exam: ExamInfo }) {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-14">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 sm:px-6 lg:px-8 py-10 md:py-14">
         <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: exam.name }]} className="mb-6" />
         <p className="text-sm font-semibold text-brass">{exam.full}</p>
         <h1 className="mt-1 max-w-4xl text-5xl font-black uppercase leading-[0.98] sm:text-6xl lg:text-7xl">{exam.title}</h1>
