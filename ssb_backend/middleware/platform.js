@@ -17,6 +17,16 @@ function allowedOrigins() {
     .filter(Boolean);
 }
 
+/** Preview and production hosts Vercel gives this project. Each deploy gets a new preview host. */
+function isReadyKadetVercel(origin) {
+  let url;
+  try { url = new URL(origin); } catch { return false; }
+  if (url.protocol !== 'https:' || url.port || url.username) return false;
+  const host = url.hostname;
+  return host === 'readykadet.vercel.app'
+    || /^readykadet-[a-z0-9-]+-hks-projects-322d3838\.vercel\.app$/.test(host);
+}
+
 function corsOptions() {
   const list = allowedOrigins();
   const devDefaults = ['http://localhost:3000', 'http://localhost:3103', 'http://localhost:8080'];
@@ -24,7 +34,8 @@ function corsOptions() {
   return {
     origin(origin, cb) {
       if (!origin) return cb(null, true);
-      return cb(null, allow.has(origin.replace(/\/+$/, '')));
+      const clean = origin.replace(/\/+$/, '');
+      return cb(null, allow.has(clean) || isReadyKadetVercel(clean));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],

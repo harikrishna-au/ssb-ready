@@ -23,6 +23,13 @@ test('CORS: allowed origin is echoed, unknown origin gets no CORS headers', asyn
   assert.equal(bad.headers.get('access-control-allow-origin'), null);
 });
 
+test('CORS: ReadyKadet Vercel preview hosts are allowed', async () => {
+  const preview = await call('GET', '/api/health', { headers: { Origin: 'https://readykadet-a9ysj8a6r-hks-projects-322d3838.vercel.app' } });
+  assert.equal(preview.headers.get('access-control-allow-origin'), 'https://readykadet-a9ysj8a6r-hks-projects-322d3838.vercel.app');
+  const other = await call('GET', '/api/health', { headers: { Origin: 'https://someone-else.vercel.app' } });
+  assert.equal(other.headers.get('access-control-allow-origin'), null);
+});
+
 test('CORS preflight from an unknown origin is not approved', async () => {
   const r = await call('OPTIONS', '/api/data/piq', { headers: { Origin: 'https://evil.test', 'Access-Control-Request-Method': 'POST' } });
   assert.equal(r.headers.get('access-control-allow-origin'), null);
