@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Mic, Send, Square, Volume2, VolumeX } from "lucide-react";
 import Link from "next/link";
 import { ErrorView } from "@/components/exam/ui";
+import { VisemeOfficer } from "@/components/interview/viseme-officer";
 import { api } from "@/lib/api";
 import { usePiq } from "@/lib/use-piq";
 import { PageLoader } from "@/components/loader";
@@ -36,16 +37,11 @@ export default function InterviewPage() {
   const [listening, setListening] = useState(false);
   const [speak, setSpeak] = useState(true);
   const [error, setError] = useState("");
+  const [spoken, setSpoken] = useState(GREETING.content);
   const rec = useRef<Recognition | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
   useEffect(() => bottom.current?.scrollIntoView({ behavior: "smooth" }), [chat]);
-
-  const say = (text: string) => {
-    if (!speak || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
-  };
 
   const send = async (override?: string) => {
     const text = (override ?? input).trim();
@@ -62,7 +58,7 @@ export default function InterviewPage() {
       });
       const reply = r.reply?.trim() || "Please continue.";
       setChat([...history, { role: "assistant", content: reply }]);
-      say(reply);
+      setSpoken(reply);
     } catch (e) {
       setError(e instanceof Error ? e.message : "The officer is unavailable");
     } finally {
@@ -111,7 +107,10 @@ export default function InterviewPage() {
         </div>
       </div>
 
-      <div className="mt-6 flex-1 space-y-4 overflow-y-auto rounded-3xl border border-white/[0.08] bg-card/40 p-5 md:p-7" style={{ maxHeight: "calc(100dvh - 20rem)" }} aria-live="polite">
+      <div className="mt-6 grid flex-1 items-start gap-6 lg:grid-cols-[minmax(240px,340px)_1fr]">
+      <VisemeOfficer text={spoken} voice={speak} busy={busy} />
+      <div className="flex min-h-0 flex-col">
+      <div className="flex-1 space-y-4 overflow-y-auto rounded-3xl border border-white/[0.08] bg-card/40 p-5 md:p-7" style={{ maxHeight: "calc(100dvh - 22rem)" }} aria-live="polite">
         {chat.map((m, i) => (
           <div key={i} className={`flex gap-3 ${m.role === "user" ? "justify-end" : ""}`}>
             {m.role === "assistant" && <span className="mt-1 grid size-8 shrink-0 place-items-center rounded-full bg-brass/20 text-xs font-bold text-brass" aria-hidden>IO</span>}
@@ -139,6 +138,8 @@ export default function InterviewPage() {
           <Send className="size-5" aria-hidden />
         </button>
       </form>
+      </div>
+      </div>
     </div>
   );
 }

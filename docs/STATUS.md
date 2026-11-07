@@ -54,8 +54,7 @@ Branch: `integration/merged` (all five agent branches merged). Written 31 Oct 20
 - Login is Clerk only. All user data (results, history, PIQ, profiles) is in Supabase (`app_docs`, private, service-role key only). There is **no Firebase or Firestore** in `ssb_web`, `ssb_backend` or `supabase/`.
 - Removed: the `firebase-admin` package, the Firebase token path, Firebase/Clerk account linking (`/api/me/link-identity`, `user_identities`), the Firestore copy script and the legacy OIR import/purge scripts (they were built around Firestore; use the Supabase content bank and `scripts/seed_content.js`).
 - Renamed: `/api/firestore/*` is now `/api/data/*`; `req.firebaseUser` is `req.authUser`; export JSON key `firestore` is `documents`.
-- **The Flutter app (`ssb_ready_app`) still uses Firebase login and the old `/api/firestore/*` paths. It will not work against this backend until it is moved to Clerk.**
-- Leftover Firebase files you can delete when you are ready: `firebase/`, `firebase.json`, `_ref_gbar/`, and the Firebase mentions in `docs/agents/`, `docs/handoff/` and `docs/SECURITY.md` (historical).
+- Removed 7 Nov 2026: the Flutter app `ssb_ready_app`, `firebase/`, `firebase.json`, the `_ref_gbar` submodule, `install-flutter.sh`, the empty root `package-lock.json`, and `render.yaml`. The API deploys with `ssb_backend/scripts/deploy_lambda.sh`.
 
 ## Backend deployed on AWS (1 Nov 2026)
 - Live: `https://ajqqwsb247x3hpmugniuho37p40wbkcs.lambda-url.ap-southeast-2.on.aws` (Lambda + Function URL, Sydney). Checked from the internet: database ok, Supabase ok, protected routes ask for login, CORS allows only the Vercel site, 66 of 71 endpoints answer (the rest are the readiness check, which fails only because of the OpenAI key, and 3 public write routes not probed).
