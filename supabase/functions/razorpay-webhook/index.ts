@@ -10,7 +10,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
  * Every delivery is logged once in payment_events (event_id is unique), so replays are harmless.
  */
 
-const PLAN_TYPE = "lifetime";
+const PLANS: Record<string, number> = { month: 1, quarter: 3, year: 12 };
+
+function addMonths(fromIso: string, months: number): string {
+  const d = new Date(fromIso);
+  const day = d.getUTCDate();
+  d.setUTCMonth(d.getUTCMonth() + months);
+  if (d.getUTCDate() < day) d.setUTCDate(0);
+  return d.toISOString();
+}
 
 function requireEnv(name: string): string {
   const value = Deno.env.get(name);
@@ -98,13 +106,16 @@ serve(async (req: Request) => {
       const notes = payment?.notes ?? {};
       const email = text(notes.email) || text(payment?.email) || txn.email || "";
       const username = text(notes.username) || (email.split("@")[0] || "member").toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 24) || "member";
+      const planId = text(notes.plan);
+      const months = PLANS[planId];
 
       const { data: existing } = await admin.from("premium_members").select("premium_since, subscription_status").eq("user_id", txn.user_id).maybeSingle();
       const premiumSince = existing?.subscription_status === "active" && existing.premium_since ? existing.premium_since : now;
 
       const member = {
-        user_id: txn.user_id, email, username, is_premium: true, plan_type: PLAN_TYPE,
-        subscription_id: paymentId, subscription_status: "active", premium_expires_at: null, updated_at: now,
+        user_id: txn.user_id, email, username, is_premium: true, plan_type: months ? planId : "lifetime",
+        subscription_id: paymentId, subscription_status: "active",
+        premium_expires_at: months ? addMonths(now, months) : null, updated_at: now,
       };
       const { error: pErr } = await admin.from("profiles").upsert(member, { onConflict: "user_id" });
       if (pErr) throw pErr;

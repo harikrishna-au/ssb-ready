@@ -15,7 +15,7 @@ export default function Terms() {
       <h2>Your content</h2>
       <p>You keep ownership of what you write. You allow us to store it and send it to our AI provider to produce your feedback.</p>
       <h2>Paid access</h2>
-      <p>Lifetime access is a one-time payment of {LEGAL.price}. It applies to your account for as long as the service is offered. Refunds are covered in the <a href="/refunds">refund policy</a>.</p>
+      <p>Paid access is {LEGAL.monthlyPrice} per month, {LEGAL.threeMonthPrice} for three months, or {LEGAL.yearPrice} for a year. Access lasts for the period you pay for. Refunds are covered in the <a href="/refunds">refund policy</a>.</p>
       <h2>Changes and availability</h2>
       <p>We may change features or these terms. The service is provided as is and may sometimes be unavailable.</p>
       <h2>Contact</h2>

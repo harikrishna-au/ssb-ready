@@ -58,7 +58,7 @@ export function OwnedCard({ since }: { since: string | null }) {
   const paid = data?.items.find((i) => i.status === "paid");
   return (
     <section className="mt-8 rounded-2xl border border-green-500/40 bg-green-500/5 p-6" aria-labelledby="owned">
-      <h2 id="owned" className="text-2xl font-extrabold uppercase">You have Lifetime access</h2>
+      <h2 id="owned" className="text-2xl font-extrabold uppercase">You have paid access</h2>
       <p className="mt-1 text-muted-foreground">
         All pictures for PPDT and TAT are unlocked on every device you are signed in on.
         {since && ` Active since ${when(since)}.`}

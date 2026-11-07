@@ -3,7 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { ApiError, payments } from "@/lib/api";
-import { LEGAL } from "@/lib/legal";
+import { LEGAL, type PlanId } from "@/lib/legal";
 import { usePremium } from "@/lib/use-premium";
 import { loadRazorpay, type RazorpayResponse } from "./razorpay";
 
@@ -16,7 +16,7 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * Pay button. The server decides the amount and whether the PIQ is complete; this component only
  * opens Razorpay with what the server returned and reports the result back for verification.
  */
-export function Checkout() {
+export function Checkout({ plan, priceLabel, period }: { plan: PlanId; priceLabel: string; period: string }) {
   const { refresh } = usePremium();
   const [phase, setPhase] = useState<Phase>("idle");
   const [message, setMessage] = useState("");
@@ -72,7 +72,7 @@ export function Checkout() {
     setPhase("starting");
     setMessage("");
     try {
-      const [order, Razorpay] = await Promise.all([payments<OrderOut>({ action: "create_order" }), loadRazorpay()]);
+      const [order, Razorpay] = await Promise.all([payments<OrderOut>({ action: "create_order", plan }), loadRazorpay()]);
       paidRef.current = false;
       const rzp = new Razorpay({
         key: order.keyId,
@@ -80,7 +80,7 @@ export function Checkout() {
         amount: order.amountPaise,
         currency: order.currency,
         name: "ReadyKadet",
-        description: "Lifetime access, paid once",
+        description: `${priceLabel} ${period}`,
         prefill: order.prefill,
         theme: { color: "#4b7bf5" },
         handler: (r) => void onPaid(r),
@@ -131,9 +131,9 @@ export function Checkout() {
         className="inline-flex h-12 min-w-48 items-center justify-center gap-2 rounded-full bg-brass px-8 font-semibold text-black transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-60 disabled:hover:translate-y-0"
       >
         {working && <Loader2 className="size-4 animate-spin" aria-hidden />}
-        {phase === "confirming" ? "Confirming payment…" : phase === "starting" ? "Starting…" : phase === "cancelled" || phase === "failed" ? `Try again, pay ${LEGAL.price}` : `Pay ${LEGAL.price}`}
+        {phase === "confirming" ? "Confirming payment…" : phase === "starting" ? "Starting…" : phase === "cancelled" || phase === "failed" ? `Try again, pay ${priceLabel}` : `Pay ${priceLabel}`}
       </button>
-      <p className="mt-2 text-xs text-muted-foreground">Secure checkout by Razorpay. UPI, cards and netbanking. One payment, no renewal.</p>
+      <p className="mt-2 text-xs text-muted-foreground">Secure checkout by Razorpay. UPI, cards and netbanking. This payment covers {period.replace(/^per /, "one ").replace(/^for /, "")}.</p>
       {phase !== "done" && (
         <div className="mt-4 text-sm">
           {!couponOpen ? (

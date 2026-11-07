@@ -22,9 +22,9 @@ export default function Billing() {
         <div className="mt-8 rounded-2xl border border-white/10 p-6">
           <p className="font-semibold">No payments yet.</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {data.premium ? "You have Lifetime access from a purchase that is not recorded on this site (for example the mobile app)." : `Lifetime access is ${LEGAL.price}, paid once.`}
+            {data.premium ? "You have paid access from a purchase that is not recorded on this site (for example the mobile app)." : `Paid access is ${LEGAL.monthlyPrice} a month, ${LEGAL.threeMonthPrice} for three months, or ${LEGAL.yearPrice} for the year.`}
           </p>
-          {!data.premium && <Link href="/premium" className="mt-4 inline-flex h-11 items-center rounded-full bg-brass px-6 font-semibold text-black">See Lifetime access</Link>}
+          {!data.premium && <Link href="/premium" className="mt-4 inline-flex h-11 items-center rounded-full bg-brass px-6 font-semibold text-black">See plans</Link>}
         </div>
       )}
 
@@ -33,7 +33,7 @@ export default function Billing() {
           <li key={i.orderId} className="rounded-2xl border border-white/10 p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="font-semibold">Lifetime access</p>
+                <p className="font-semibold">Paid access</p>
                 <p className="text-sm text-muted-foreground">{when(i.paidAt ?? i.createdAt)}</p>
               </div>
               <div className="flex items-center gap-3">
@@ -42,7 +42,7 @@ export default function Billing() {
               </div>
             </div>
             {i.status === "failed" && i.failureReason && <p className="mt-3 text-sm text-muted-foreground">Reason given by the bank: {i.failureReason}</p>}
-            {i.status === "refunded" && i.refundedAt && <p className="mt-3 text-sm text-muted-foreground">Refunded on {when(i.refundedAt)}. Lifetime access was removed.</p>}
+            {i.status === "refunded" && i.refundedAt && <p className="mt-3 text-sm text-muted-foreground">Refunded on {when(i.refundedAt)}. Paid access was removed.</p>}
             {i.status !== "failed" && (
               <details className="mt-4">
                 <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold text-primary focus-visible:outline-2 focus-visible:outline-primary">Receipt details</summary>

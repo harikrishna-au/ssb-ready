@@ -1,10 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { Check, Lock } from "lucide-react";
 import Link from "next/link";
 import { Checkout } from "@/components/billing/checkout";
 import { OwnedCard } from "@/components/billing/receipt";
-import { LEGAL } from "@/lib/legal";
+import { LEGAL, PLANS, type PlanId } from "@/lib/legal";
 import { usePiq } from "@/lib/use-piq";
 import { usePremium } from "@/lib/use-premium";
 import { LinkButton } from "@/components/ui/link-button";
@@ -14,14 +15,18 @@ export default function Premium() {
   const { completeness: c, loading, failed, reload } = usePiq();
   const piqDone = !loading && !failed && c.complete;
   const own = usePremium();
+  const [planId, setPlanId] = useState<PlanId>("year");
+  const plan = PLANS.find((p) => p.id === planId) ?? PLANS[2];
 
   return (
     <div className="rise max-w-2xl">
-      <h1 className="font-display text-6xl font-black uppercase leading-none">Lifetime access</h1>
-      <p className="mt-4 font-display text-6xl font-black text-brass">{LEGAL.price} <span className="text-xl font-semibold text-muted-foreground">paid once</span></p>
+      <h1 className="font-display text-6xl font-black uppercase leading-none">Plans</h1>
+      <p className="mt-4 font-display text-5xl font-black text-brass">{LEGAL.monthlyPrice} <span className="text-xl font-semibold text-muted-foreground">a month</span></p>
+      <p className="mt-1 text-muted-foreground">Or {LEGAL.threeMonthPrice} for three months, or {LEGAL.yearPrice} for the year.</p>
       <ul className="mt-6 space-y-2 text-muted-foreground">
-        <li className="flex gap-3"><Check className="mt-1 size-4 shrink-0 text-brass" aria-hidden />The full 45-picture bank for PPDT and TAT, instead of 5</li>
-        <li className="flex gap-3"><Check className="mt-1 size-4 shrink-0 text-brass" aria-hidden />No subscription and no renewal</li>
+        <li className="flex gap-3"><Check className="mt-1 size-4 shrink-0 text-brass" aria-hidden />AI feedback on written attempts</li>
+        <li className="flex gap-3"><Check className="mt-1 size-4 shrink-0 text-brass" aria-hidden />Mock interview with the interviewing officer</li>
+        <li className="flex gap-3"><Check className="mt-1 size-4 shrink-0 text-brass" aria-hidden />The full 45-picture bank for PPDT and TAT</li>
       </ul>
 
       {own.premium && <OwnedCard since={own.premiumSince} />}
@@ -60,12 +65,26 @@ export default function Premium() {
         <li className={`rounded-2xl border p-6 transition-opacity ${piqDone ? "border-brass/40" : "border-white/10 opacity-60"}`}>
           <div className="flex items-start gap-4">
             <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/10 text-sm font-bold">{piqDone ? 2 : <Lock className="size-4" aria-hidden />}</span>
-            <div>
-              <h2 className="text-2xl font-extrabold uppercase">Pay {LEGAL.price}</h2>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-2xl font-extrabold uppercase">Choose a plan</h2>
               {piqDone ? (
                 <>
-                  <p className="mt-1 text-sm text-muted-foreground">Your PIQ is on file. Pay once and the full picture bank unlocks straight away. Bought it on the mobile app already? Sign in to the web with the same verified email and it carries over.</p>
-                  <Checkout />
+                  <p className="mt-1 text-sm text-muted-foreground">Your PIQ is on file. Pick how long you want access, then pay. Bought it on the mobile app already? Sign in to the web with the same verified email and it carries over.</p>
+                  <fieldset className="mt-4">
+                    <legend className="sr-only">Plan</legend>
+                    <div className="grid gap-2">
+                      {PLANS.map((p) => (
+                        <label key={p.id} className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 ${planId === p.id ? "border-brass bg-brass/10" : "border-white/10"}`}>
+                          <span className="flex items-center gap-3">
+                            <input type="radio" name="plan" value={p.id} checked={planId === p.id} onChange={() => setPlanId(p.id)} className="accent-[#c4a15a]" />
+                            <span className="font-semibold">{p.label}</span>
+                          </span>
+                          <span className="text-sm text-muted-foreground">{p.price} {p.detail}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <Checkout key={plan.id} plan={plan.id} priceLabel={plan.price} period={plan.detail} />
                 </>
               ) : (
                 <p className="mt-1 text-sm text-muted-foreground">Unlocks once your PIQ is complete.</p>

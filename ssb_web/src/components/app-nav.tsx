@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { usePiq } from "@/lib/use-piq";
 import { usePremium } from "@/lib/use-premium";
+import { LEGAL } from "@/lib/legal";
 import { appCrumbs, backTarget } from "@/lib/nav";
 import { Breadcrumbs } from "./breadcrumbs";
 import { Logo } from "./site/header";
@@ -75,8 +76,8 @@ export function Sidebar() {
 
       {!premium.loading && !premium.premium && (
         <Link href="/premium" className="mb-3 block rounded-2xl border border-brass/30 bg-brass/10 p-4 transition-colors hover:bg-brass/15">
-          <span className="flex items-center gap-2 font-semibold text-brass"><Crown className="size-4" aria-hidden /> Lifetime access</span>
-          <span className="mt-1 block text-xs text-muted-foreground">Unlock all 45 pictures for PPDT and TAT.</span>
+          <span className="flex items-center gap-2 font-semibold text-brass"><Crown className="size-4" aria-hidden /> Plans</span>
+          <span className="mt-1 block text-xs text-muted-foreground">{LEGAL.monthlyPrice} a month, or {LEGAL.yearPrice} for the year.</span>
         </Link>
       )}
 
@@ -110,7 +111,7 @@ export function TopBar() {
       <Breadcrumbs items={appCrumbs(path)} className="min-w-0 flex-1" />
       {!premium.loading && !premium.premium && (
         <Link href="/premium" className="hidden shrink-0 items-center gap-1.5 rounded-full border border-brass/40 px-3 py-1.5 text-xs font-semibold text-brass transition-colors hover:bg-brass/10 sm:inline-flex md:hidden">
-          <Crown className="size-3.5" aria-hidden /> Lifetime
+          <Crown className="size-3.5" aria-hidden /> Plans
         </Link>
       )}
       <div className="md:hidden"><UserButton /></div>

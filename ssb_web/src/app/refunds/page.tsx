@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Refund policy" };
 export default function Refunds() {
   return (
     <LegalPage title="Refund policy">
-      <p>Lifetime access costs {LEGAL.price} and is paid once.</p>
+      <p>Paid access is {LEGAL.monthlyPrice} for a month, {LEGAL.threeMonthPrice} for three months, or {LEGAL.yearPrice} for a year.</p>
       <h2>Requesting a refund</h2>
       <p>If you are not satisfied, write to <a href={`mailto:${LEGAL.supportEmail}`}>{LEGAL.supportEmail}</a> within {LEGAL.refundWindowDays} days of paying. Use the email address you signed up with and tell us what went wrong.</p>
       <h2>How refunds are paid</h2>

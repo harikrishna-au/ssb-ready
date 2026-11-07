@@ -7,11 +7,28 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const LIST_PRICE_INR = 499;
-const DISCOUNT_INR = 200;
-const PAYABLE_AMOUNT_INR = LIST_PRICE_INR - DISCOUNT_INR;
-const PAYABLE_AMOUNT_PAISE = PAYABLE_AMOUNT_INR * 100;
-const PLAN_TYPE = "lifetime";
+/** Server prices. The web app shows the same ids and rupee amounts. */
+const PLANS: Record<string, { inr: number; months: number }> = {
+  month: { inr: 199, months: 1 },
+  quarter: { inr: 499, months: 3 },
+  year: { inr: 1200, months: 12 },
+};
+const LEGACY_LIFETIME_PAISE = 29900;
+
+function planOf(id: unknown): { id: string; inr: number; months: number; paise: number } | null {
+  const key = normalizeText(id);
+  const plan = PLANS[key];
+  if (!plan) return null;
+  return { id: key, ...plan, paise: plan.inr * 100 };
+}
+
+function addMonths(fromIso: string, months: number): string {
+  const d = new Date(fromIso);
+  const day = d.getUTCDate();
+  d.setUTCMonth(d.getUTCMonth() + months);
+  if (d.getUTCDate() < day) d.setUTCDate(0);
+  return d.toISOString();
+}
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -84,7 +101,7 @@ async function assertPiqComplete(token: string) {
   if (!res.ok) throw new Error("Could not check your PIQ right now");
   const me = await res.json();
   if (!me.piqComplete) throw new Error("Complete your PIQ before paying");
-  if (me.premium) throw new Error("You already have Lifetime access");
+  if (me.premium) throw new Error("You already have paid access");
 }
 
 function razorpayAuthHeader() {
@@ -102,6 +119,7 @@ async function createRazorpayOrder(params: {
   uid: string;
   email: string;
   username: string;
+  plan: { id: string; inr: number; paise: number };
 }) {
   const receipt = `ssb_${params.uid.slice(0, 12)}_${Date.now()}`.slice(0, 40);
   const res = await fetch("https://api.razorpay.com/v1/orders", {
@@ -111,17 +129,15 @@ async function createRazorpayOrder(params: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      amount: PAYABLE_AMOUNT_PAISE,
+      amount: params.plan.paise,
       currency: "INR",
       receipt,
       notes: {
         uid: params.uid,
         email: params.email,
         username: params.username,
-        plan: PLAN_TYPE,
-        list_price_inr: String(LIST_PRICE_INR),
-        discount_inr: String(DISCOUNT_INR),
-        amount_inr: String(PAYABLE_AMOUNT_INR),
+        plan: params.plan.id,
+        amount_inr: String(params.plan.inr),
       },
     }),
   });
@@ -151,8 +167,9 @@ async function linkedIds(_admin: ReturnType<typeof supabaseAdmin>, uid: string):
 }
 
 async function hasPremium(admin: ReturnType<typeof supabaseAdmin>, ids: string[]): Promise<boolean> {
-  const { data } = await admin.from("premium_members").select("user_id").in("user_id", ids).eq("subscription_status", "active").limit(1);
-  return !!data?.length;
+  const { data } = await admin.from("premium_members").select("subscription_status, premium_expires_at").in("user_id", ids).eq("subscription_status", "active");
+  const now = Date.now();
+  return (data ?? []).some((row) => !row.premium_expires_at || new Date(row.premium_expires_at).getTime() > now);
 }
 
 function gstBreakup(totalPaise: number) {
@@ -163,14 +180,15 @@ function gstBreakup(totalPaise: number) {
 
 /** Same shape for a fresh order and a re-used one. Snake_case keys are for the mobile app, camelCase for the web. */
 function orderPayload(order: { order_id: string; amount_paise: number }, name: string, email: string) {
+  const amountInr = order.amount_paise / 100;
   return {
     success: true,
     key_id: requireEnv("RAZORPAY_KEY_ID"),
     order_id: order.order_id,
     amount_paise: order.amount_paise,
-    amount_inr: order.amount_paise / 100,
-    list_price_inr: LIST_PRICE_INR,
-    discount_inr: DISCOUNT_INR,
+    amount_inr: amountInr,
+    list_price_inr: amountInr,
+    discount_inr: 0,
     currency: "INR",
     keyId: requireEnv("RAZORPAY_KEY_ID"),
     orderId: order.order_id,
@@ -247,6 +265,8 @@ async function updatePremiumProfile(params: {
   orderId: string;
   paymentId: string;
   amountInr?: number;
+  planType?: string;
+  expiresAt?: string | null;
 }) {
   const admin = supabaseAdmin();
   const now = new Date().toISOString();
@@ -255,10 +275,10 @@ async function updatePremiumProfile(params: {
     email: params.email,
     username: params.username,
     is_premium: true,
-    plan_type: PLAN_TYPE,
+    plan_type: params.planType || "year",
     subscription_id: params.paymentId,
     subscription_status: "active",
-    premium_expires_at: null,
+    premium_expires_at: params.expiresAt === undefined ? null : params.expiresAt,
     updated_at: now,
   };
 
@@ -281,7 +301,7 @@ async function updatePremiumProfile(params: {
         ...profilePayload,
         order_id: params.orderId,
         payment_id: params.paymentId,
-        amount_inr: params.amountInr ?? PAYABLE_AMOUNT_INR,
+        amount_inr: params.amountInr ?? 0,
         premium_since: premiumSince,
       },
       { onConflict: "user_id" },
@@ -328,22 +348,24 @@ serve(async (req: Request) => {
     const action = normalizeText(body.action);
 
     if (action === "create_order") {
+      const plan = planOf(body.plan);
+      if (!plan) return jsonResponse({ error: "Choose a monthly, three-month, or yearly plan." }, 400);
       await assertPiqComplete(token);
       const admin = supabaseAdmin();
       const ids = await linkedIds(admin, authUser.uid);
-      if (await hasPremium(admin, ids)) return jsonResponse({ error: "You already have Lifetime access" }, 409);
+      if (await hasPremium(admin, ids)) return jsonResponse({ error: "You already have paid access" }, 409);
 
       const email = normalizeText(body.email) || authUser.email;
       const username = buildUsername(email, normalizeText(body.username) || authUser.name);
 
-      // Re-use a recent unpaid order (retry after cancel, page refresh) instead of piling up new ones.
+      // Re-use a recent unpaid order for this same plan instead of piling up new ones.
       const since = new Date(Date.now() - OPEN_ORDER_REUSE_MS).toISOString();
       const { data: open } = await admin
         .from("payment_transactions")
         .select("order_id, amount_paise")
         .eq("user_id", authUser.uid)
         .in("status", ["created", "failed"])
-        .eq("amount_paise", PAYABLE_AMOUNT_PAISE)
+        .eq("amount_paise", plan.paise)
         .gte("created_at", since)
         .order("created_at", { ascending: false })
         .limit(1);
@@ -353,27 +375,28 @@ serve(async (req: Request) => {
         uid: authUser.uid,
         email,
         username,
+        plan,
       });
-      if (order.amount !== PAYABLE_AMOUNT_PAISE) throw new Error("The payment provider returned an unexpected amount");
+      if (order.amount !== plan.paise) throw new Error("The payment provider returned an unexpected amount");
 
       const { error: insertError } = await admin.from("payment_transactions").insert({
         user_id: authUser.uid,
         txnid: order.id,
         order_id: order.id,
-        amount: PAYABLE_AMOUNT_INR,
-        amount_paise: PAYABLE_AMOUNT_PAISE,
+        amount: plan.inr,
+        amount_paise: plan.paise,
         currency: "INR",
         status: "created",
         email,
         source: "web",
         provider_reference_id: order.id,
         raw_response: order,
-        ...gstBreakup(PAYABLE_AMOUNT_PAISE),
+        ...gstBreakup(plan.paise),
       });
       if (insertError) throw new Error("Could not start the payment. Please try again.");
       await admin.from("payment_events").insert({ order_id: order.id, user_id: authUser.uid, kind: "order_created", to_status: "created" });
 
-      return jsonResponse(orderPayload({ order_id: order.id, amount_paise: PAYABLE_AMOUNT_PAISE }, authUser.name, email));
+      return jsonResponse(orderPayload({ order_id: order.id, amount_paise: plan.paise }, authUser.name, email));
     }
 
     if (action === "order_status") {
@@ -446,33 +469,41 @@ serve(async (req: Request) => {
       }
 
       // The signature proves the checkout belongs to this order. Also confirm with Razorpay that the money is real.
+      const order = await fetchRazorpayOrder(orderId);
+      const notes = order.notes ?? {};
+      const plan = planOf(notes.plan);
+      const legacy = normalizeText(notes.plan) === "lifetime" && order.amount === LEGACY_LIFETIME_PAISE;
+      const expectedPaise = plan?.paise ?? (legacy ? LEGACY_LIFETIME_PAISE : 0);
+      if (!expectedPaise || order.amount !== expectedPaise) {
+        return jsonResponse({ error: "Unexpected payment amount" }, 400);
+      }
+
       let payment = await razorpayCall("GET", `/payments/${paymentId}`);
-      if (payment.order_id !== orderId || payment.amount !== PAYABLE_AMOUNT_PAISE) {
+      if (payment.order_id !== orderId || payment.amount !== expectedPaise) {
         return jsonResponse({ error: "Payment does not match this order" }, 400);
       }
       if (payment.status === "authorized") {
-        payment = await razorpayCall("POST", `/payments/${paymentId}/capture`, { amount: PAYABLE_AMOUNT_PAISE, currency: "INR" });
+        payment = await razorpayCall("POST", `/payments/${paymentId}/capture`, { amount: expectedPaise, currency: "INR" });
       }
       if (payment.status !== "captured") return jsonResponse({ error: "Payment was not completed" }, 400);
 
-      const order = await fetchRazorpayOrder(orderId);
-      const notes = order.notes ?? {};
       const noteUid = normalizeText(notes.uid);
       if (noteUid !== authUser.uid) {
         return jsonResponse({ error: "Order does not belong to this user" }, 403);
       }
-      if (order.amount !== PAYABLE_AMOUNT_PAISE) {
-        return jsonResponse({ error: "Unexpected payment amount" }, 400);
-      }
 
       const email = normalizeText(notes.email) || authUser.email;
       const username = normalizeText(notes.username) || buildUsername(email, authUser.name);
+      const now = new Date().toISOString();
       await updatePremiumProfile({
         uid: authUser.uid,
         email,
         username,
         orderId,
         paymentId,
+        amountInr: expectedPaise / 100,
+        planType: plan?.id ?? "lifetime",
+        expiresAt: plan ? addMonths(now, plan.months) : null,
       });
 
       await syncProfile(token, {
@@ -480,10 +511,10 @@ serve(async (req: Request) => {
         email,
         username,
         isPremium: true,
-        planType: PLAN_TYPE,
-        premiumAmount: PAYABLE_AMOUNT_INR,
-        premiumListPrice: LIST_PRICE_INR,
-        premiumDiscount: DISCOUNT_INR,
+        planType: plan?.id ?? "lifetime",
+        premiumAmount: expectedPaise / 100,
+        premiumListPrice: expectedPaise / 100,
+        premiumDiscount: 0,
         premiumOrderId: orderId,
         premiumPaymentId: paymentId,
       });
@@ -506,8 +537,8 @@ serve(async (req: Request) => {
         success: true,
         status: "paid",
         isPremium: true,
-        planType: PLAN_TYPE,
-        amount_inr: PAYABLE_AMOUNT_INR,
+        planType: plan?.id ?? "lifetime",
+        amount_inr: expectedPaise / 100,
       });
     }
 
@@ -552,6 +583,7 @@ serve(async (req: Request) => {
         await updatePremiumProfile({
           uid: authUser.uid, email, username,
           orderId: `coupon_${id}`, paymentId: `coupon_${id}`, amountInr: 0,
+          planType: "lifetime", expiresAt: null,
         });
       } catch (grantError) {
         // Give back exactly the slot this request took, so a failed grant does not use up the code.
@@ -561,11 +593,11 @@ serve(async (req: Request) => {
         throw grantError;
       }
       await syncProfile(token, {
-        userId: authUser.uid, email, username, isPremium: true, planType: PLAN_TYPE,
-        premiumAmount: 0, premiumListPrice: LIST_PRICE_INR, premiumDiscount: LIST_PRICE_INR,
+        userId: authUser.uid, email, username, isPremium: true, planType: "lifetime",
+        premiumAmount: 0, premiumListPrice: 0, premiumDiscount: 0,
         premiumOrderId: `coupon_${id}`, premiumPaymentId: `coupon_${id}`,
       });
-      return jsonResponse({ success: true, status: "paid", isPremium: true, planType: PLAN_TYPE });
+      return jsonResponse({ success: true, status: "paid", isPremium: true, planType: "lifetime" });
     }
 
     throw new Error("Unsupported action");

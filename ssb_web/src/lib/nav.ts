@@ -10,7 +10,7 @@ const LABELS: Record<string, string> = {
   applications: "Applications",
   history: "Progress",
   "olq-profile": "OLQ Profile",
-  premium: "Lifetime access",
+  premium: "Plans",
   radar: "Radar",
   piq: "PIQ",
   profile: "Account",
