@@ -2,28 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const MOUTH: Record<string, number> = {
-  a: 2, e: 4, i: 6, o: 8, u: 7,
-  b: 21, m: 21, p: 21,
-  f: 18, v: 18,
-  s: 15, z: 15, c: 15, x: 15,
-  j: 16,
-  l: 14, r: 13,
-  w: 7, y: 6,
-  d: 19, t: 19, n: 19,
-  k: 20, g: 20, q: 20,
-  h: 12,
-};
-
-/** Azure-style mouth shape for the character being spoken. 0 is a closed mouth. */
-function visemeFor(text: string, index: number): number {
-  const pair = text.slice(index, index + 2).toLowerCase();
-  if (pair === "th") return 17;
-  if (pair === "sh" || pair === "ch") return 16;
-  const ch = text[index]?.toLowerCase() ?? "";
-  if (!/[a-z]/.test(ch)) return 0;
-  return MOUTH[ch] ?? 19;
-}
+/** Mouth shapes that sit on this face. Closed is 0. */
+const TALKING = [4, 6, 2, 15, 11, 19, 8, 1];
 
 function pickVoice(): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
@@ -37,13 +17,17 @@ function pickVoice(): SpeechSynthesisVoice | null {
 }
 
 /**
- * Talking interviewing officer. The face is the gbar cartoon; the mouth
- * shape follows the line currently being spoken.
+ * Talking interviewing officer from the gbar interview.
+ * The mouth stays one size on the face and moves for as long as she is speaking.
  */
 export function VisemeOfficer({ text, voice, busy }: { text: string; voice: boolean; busy: boolean }) {
   const [viseme, setViseme] = useState(0);
   const [blink, setBlink] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [needsTap, setNeedsTap] = useState(false);
+  const textRef = useRef(text);
+  const talk = useRef<number | null>(null);
+  textRef.current = text;
 
   useEffect(() => {
     const tick = window.setInterval(() => {
@@ -53,76 +37,74 @@ export function VisemeOfficer({ text, voice, busy }: { text: string; voice: bool
     return () => window.clearInterval(tick);
   }, []);
 
-  useEffect(() => {
+  const stopMouth = () => {
+    if (talk.current !== null) window.clearInterval(talk.current);
+    talk.current = null;
+    setSpeaking(false);
+    setViseme(0);
+  };
+
+  const speakNow = (fromTap: boolean) => {
     if (!("speechSynthesis" in window)) return;
-    const timers: number[] = [];
-    let fallback: number | null = null;
-    let stopped = false;
-    const rest = () => {
-      if (stopped) return;
-      if (fallback !== null) window.clearInterval(fallback);
-      fallback = null;
-      setSpeaking(false);
-      setViseme(0);
-    };
-    window.speechSynthesis.cancel();
-    if (!voice || !text.trim()) {
-      rest();
+    const line = textRef.current.trim();
+    const synth = window.speechSynthesis;
+    if (!line) {
+      synth.cancel();
+      stopMouth();
       return;
     }
-
-    const start = () => {
-      if (stopped) return;
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-IN";
-      utterance.rate = 0.95;
+    const say = () => {
+      const spoken = new SpeechSynthesisUtterance(line);
+      spoken.lang = "en-IN";
+      spoken.rate = 0.95;
       const chosen = pickVoice();
-      if (chosen) utterance.voice = chosen;
-      let heardBoundary = false;
-      utterance.onstart = () => {
+      if (chosen) spoken.voice = chosen;
+      spoken.onstart = () => {
+        setNeedsTap(false);
         setSpeaking(true);
-        timers.push(window.setTimeout(() => {
-          if (heardBoundary || stopped) return;
-          let i = 0;
-          fallback = window.setInterval(() => {
-            while (i < text.length && !/[a-z]/i.test(text[i] ?? "")) i += 1;
-            if (i >= text.length) {
-              setViseme(0);
-              return;
-            }
-            setViseme(visemeFor(text, i));
-            i += 1;
-          }, 75);
-        }, 220));
+        let n = 0;
+        if (talk.current !== null) window.clearInterval(talk.current);
+        talk.current = window.setInterval(() => {
+          setViseme(TALKING[n % TALKING.length]);
+          n += 1;
+        }, 120);
       };
-      utterance.onboundary = (event) => {
-        heardBoundary = true;
-        if (fallback !== null) {
-          window.clearInterval(fallback);
-          fallback = null;
-        }
-        setViseme(visemeFor(text, event.charIndex ?? 0));
+      spoken.onend = stopMouth;
+      spoken.onerror = () => {
+        stopMouth();
+        if (!fromTap) setNeedsTap(true);
       };
-      utterance.onend = rest;
-      utterance.onerror = rest;
-      window.speechSynthesis.speak(utterance);
+      if (synth.paused) synth.resume();
+      synth.speak(spoken);
     };
+    say();
+  };
 
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length) start();
-    else window.speechSynthesis.addEventListener("voiceschanged", start, { once: true });
-
+  useEffect(() => {
+    if (!("speechSynthesis" in window)) return;
+    const synth = window.speechSynthesis;
+    if (!voice || !text.trim()) {
+      synth.cancel();
+      stopMouth();
+      return;
+    }
+    // Give Safari a turn between cancel and speak, or the line never starts.
+    synth.cancel();
+    const timer = window.setTimeout(() => speakNow(false), 80);
+    const watch = window.setTimeout(() => {
+      if (!synth.speaking) setNeedsTap(true);
+    }, 1000);
     return () => {
-      stopped = true;
-      timers.forEach((id) => window.clearTimeout(id));
-      if (fallback !== null) window.clearInterval(fallback);
-      window.speechSynthesis.cancel();
-      setSpeaking(false);
-      setViseme(0);
+      window.clearTimeout(timer);
+      window.clearTimeout(watch);
+      synth.cancel();
+      stopMouth();
     };
+    // speakNow reads the current line from textRef.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text, voice]);
 
-  const label = speaking ? "Speaking" : busy ? "Thinking" : "Your turn";
+  const label = needsTap && voice ? "Tap her to speak" : speaking ? "Speaking" : busy ? "Thinking" : "Your turn";
 
   return (
     <figure className="m-0">
@@ -138,8 +120,17 @@ export function VisemeOfficer({ text, voice, busy }: { text: string; voice: bool
           src={`/interview/visemes/viseme_id_${viseme}.svg`}
           alt=""
           aria-hidden
-          className="absolute left-[49%] top-[47%] z-30 h-auto w-[30%] -translate-x-1/2 -translate-y-1/2 sm:w-[28%] md:w-[25%] lg:w-[22%]"
+          className="absolute left-[49%] top-[47%] z-30 h-auto w-[30%] -translate-x-1/2 -translate-y-1/2"
         />
+        {needsTap && voice && (
+          <button
+            type="button"
+            onClick={() => { setNeedsTap(false); speakNow(true); }}
+            className="absolute inset-0 z-40 grid place-items-center rounded-full bg-black/25 text-sm font-semibold text-white"
+          >
+            Tap to speak
+          </button>
+        )}
       </div>
       <figcaption className="mt-2 text-center text-sm text-muted-foreground" aria-live="polite">{label}</figcaption>
     </figure>
