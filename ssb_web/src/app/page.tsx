@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { RadarLanding } from "@/components/radar/radar-data";
 import { SiteFooter, SiteHeader } from "@/components/site/header";
 import { WatDemo } from "@/components/site/wat-demo";
+import { LEGAL } from "@/lib/legal";
 import { EXAMS, GROUPS, OLQS, TESTS, type Group } from "@/lib/tests";
 
 const FAQ = [
@@ -10,7 +11,7 @@ const FAQ = [
   { q: "Is the AI score the same as an assessor's score?", a: "No. Assessors at the board score you in person and no tool can predict that. ReadyKadet scores your answers against Officer Like Qualities so you can see patterns in how you write: what you avoid, what you repeat and where you run out of time." },
   { q: "Which exams is this for?", a: "NDA, CDS, AFCAT, CAPF and TA aspirants. The SSB tests are the same format for all of them." },
   { q: "Does it work on my phone?", a: "Yes. Every test runs in the browser on a phone, tablet or laptop. There is nothing to install." },
-  { q: "What do I get for free?", a: "You can take every test and get AI feedback on each written attempt using a set of five pictures for PPDT and TAT. Lifetime access unlocks the full 45-picture bank." },
+  { q: "What do I get for free?", a: `A trial of the tests, with five pictures for PPDT and TAT. AI feedback, the mock interview, and the full 45-picture bank are on the paid plans: ${LEGAL.monthlyPrice} a month, ${LEGAL.threeMonthPrice} for three months, or ${LEGAL.yearPrice} for the year.` },
   { q: "What happens to my answers?", a: "Your answers are stored against your account so you can review them in your history. They are sent to an AI service to be scored. Read the privacy policy for details." },
   { q: "Can I get a refund?", a: "Refund terms are on the refund policy page. Write to support@readykadet.com and include the email you signed up with." },
 ];
@@ -140,27 +141,46 @@ export default function Landing() {
         {/* Pricing */}
         <section id="pricing" className="border-t border-white/5 bg-card/40 py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <h2 className="text-5xl font-black uppercase leading-none sm:text-6xl">Pay once. Prepare for as many attempts as it takes.</h2>
-            <div className="mt-12 grid gap-6 md:max-w-4xl md:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 p-7">
+            <h2 className="text-5xl font-black uppercase leading-none sm:text-6xl">{LEGAL.monthlyPrice} a month. Or {LEGAL.yearPrice} for the year.</h2>
+            <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="flex flex-col rounded-2xl border border-white/10 p-7">
                 <h3 className="text-3xl font-extrabold uppercase">Free</h3>
                 <p className="mt-1 font-display text-5xl font-black">₹0</p>
                 <ul className="mt-6 space-y-2.5 text-sm text-muted-foreground">
-                  <li>Every test, with AI feedback on written attempts</li>
+                  <li>A trial of the tests</li>
                   <li>5 pictures for PPDT and TAT</li>
-                  <li>Attempt history</li>
                 </ul>
-                <Link href="/sign-up" className="mt-8 inline-flex rounded-lg border border-white/20 px-5 py-2.5 text-sm font-semibold">Start free</Link>
+                <Link href="/sign-up" className="mt-8 inline-flex self-start rounded-lg border border-white/20 px-5 py-2.5 text-sm font-semibold">Start free</Link>
               </div>
-              <div className="rounded-2xl border-2 border-brass p-7">
-                <h3 className="text-3xl font-extrabold uppercase text-brass">Lifetime</h3>
-                <p className="mt-1 font-display text-5xl font-black">₹299 <span className="text-lg font-semibold text-muted-foreground">one time</span></p>
+              <div className="flex flex-col rounded-2xl border border-white/10 p-7">
+                <h3 className="text-3xl font-extrabold uppercase">Monthly</h3>
+                <p className="mt-1 font-display text-5xl font-black">{LEGAL.monthlyPrice} <span className="mt-1 block text-lg font-semibold text-muted-foreground">per month</span></p>
                 <ul className="mt-6 space-y-2.5 text-sm text-muted-foreground">
-                  <li>Everything in Free</li>
-                  <li>Full 45-picture bank for PPDT and TAT</li>
-                  <li>No subscription, no renewal</li>
+                  <li>AI feedback on written attempts</li>
+                  <li>Mock interview</li>
+                  <li>Full 45-picture bank</li>
                 </ul>
-                <Link href="/premium" className="mt-8 inline-flex rounded-lg bg-brass px-5 py-2.5 text-sm font-bold text-black">Get lifetime access</Link>
+                <Link href="/pricing" className="mt-8 inline-flex self-start rounded-lg border border-white/20 px-5 py-2.5 text-sm font-semibold">See pricing</Link>
+              </div>
+              <div className="flex flex-col rounded-2xl border border-white/10 p-7">
+                <h3 className="text-3xl font-extrabold uppercase">3 months</h3>
+                <p className="mt-1 font-display text-5xl font-black">{LEGAL.threeMonthPrice} <span className="mt-1 block text-lg font-semibold text-muted-foreground">for 3 months</span></p>
+                <ul className="mt-6 space-y-2.5 text-sm text-muted-foreground">
+                  <li>Same access as monthly</li>
+                  <li>About ₹166 a month</li>
+                  <li>One payment covers three months</li>
+                </ul>
+                <Link href="/pricing" className="mt-8 inline-flex self-start rounded-lg border border-white/20 px-5 py-2.5 text-sm font-semibold">See pricing</Link>
+              </div>
+              <div className="flex flex-col rounded-2xl border-2 border-brass p-7">
+                <h3 className="text-3xl font-extrabold uppercase text-brass">Year</h3>
+                <p className="mt-1 font-display text-5xl font-black">{LEGAL.yearPrice} <span className="mt-1 block text-lg font-semibold text-muted-foreground">for the year</span></p>
+                <ul className="mt-6 space-y-2.5 text-sm text-muted-foreground">
+                  <li>Same access as monthly</li>
+                  <li>₹100 a month</li>
+                  <li>One payment covers the year</li>
+                </ul>
+                <Link href="/pricing" className="mt-8 inline-flex self-start rounded-lg bg-brass px-5 py-2.5 text-sm font-bold text-black">See pricing</Link>
               </div>
             </div>
           </div>
